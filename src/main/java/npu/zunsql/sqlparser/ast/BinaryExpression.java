@@ -1,5 +1,7 @@
 package npu.zunsql.sqlparser.ast;
 
+import npu.zunsql.common.FormatObject;
+
 public final class BinaryExpression extends FormatObject implements Expression {
   public final Expression left;
   public final Expression right;

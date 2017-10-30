@@ -9,7 +9,7 @@ import org.jparsec.Terminals;
 import npu.zunsql.sqlparser.ast.QualifiedName;
 import org.jparsec.*;
 
-final class TerminalParser {
+public final class TerminalParser {
   
   private static final String[] OPERATORS = {
     "+", "-", "*", "/", "%", ">", "<", "=", ">=", "<=", "<>", ".", ",", "(", ")", "[", "]"
@@ -44,7 +44,7 @@ final class TerminalParser {
   static final Parser<QualifiedName> QUALIFIED_NAME =
       NAME.sepBy1(term(".")).map(QualifiedName::new);
   
-  static <T> T parse(Parser<T> parser, String source) {
+  public static <T> T parse(Parser<T> parser, String source) {
     return parser.from(TOKENIZER, Scanners.SQL_DELIMITER).parse(source);
   }
   

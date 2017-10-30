@@ -1,5 +1,7 @@
 package npu.zunsql.sqlparser.ast;
 
+import npu.zunsql.common.FormatObject;
+
 public final class Column extends FormatObject {
     // QualifiedNameExpression
     public final Expression name;
