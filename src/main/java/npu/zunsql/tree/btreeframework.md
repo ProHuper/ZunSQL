@@ -109,7 +109,7 @@
 # class Row
 ## private:
 ### List`<Cell>` Celllist;
-### List<Row> SonRow;
+### List`<Row>` SonRow;
 ### Row FatherRow;
 ### Row LeftBrotherRow;
 ### Row RightBrotherRow;
