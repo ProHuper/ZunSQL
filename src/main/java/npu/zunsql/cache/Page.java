@@ -6,7 +6,7 @@ public class Page
 {
     public static final int HEAD_SIZE = 0;
     public static final int PAGE_SIZE = 1024;
-    protected static final int NEW_PAGES_SIZE = 10;
+
     protected static int pageConut = 0;
 
     protected int pageID;
@@ -16,6 +16,12 @@ public class Page
     public Page(ByteBuffer buffer)
     {
         this.pageID = pageConut++;
+        this.pageBuffer = buffer;
+    }
+
+    public Page(int pageID, ByteBuffer buffer)
+    {
+        this.pageID = pageID;
         this.pageBuffer = buffer;
     }
 
