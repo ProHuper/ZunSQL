@@ -135,6 +135,34 @@ public class RelationParserTest {
                         )));
     }
 
+    @Test
+    public void testDrop() {
+        Parser<Relation> parser = RelationParser.drop();
+        TerminalParserTest.assertParser(parser, "drop table t",
+                new Drop(tableRelation("t")));
+    }
+
+    @Test
+    public void testBegin() {
+        Parser<Relation> parser = RelationParser.begin();
+        TerminalParserTest.assertParser(parser, "begin transaction",
+                new Begin());
+    }
+
+    @Test
+    public void testCommit() {
+        Parser<Relation> parser = RelationParser.commit();
+        TerminalParserTest.assertParser(parser, "commit",
+                new Commit());
+    }
+
+    @Test
+    public void testRollback() {
+        Parser<Relation> parser = RelationParser.rollback();
+        TerminalParserTest.assertParser(parser, "rollback",
+                new Rollback());
+    }
+
     static Relation table(String... names) {
         return new TableRelation(QualifiedName.of(names));
     }

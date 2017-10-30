@@ -20,8 +20,9 @@ final class TerminalParser {
     "and", "or", "not", "in", "exists", "between", "is", "null", "like", "escape",
     "inner", "outer", "left", "right", "full", "cross", "join", "on",
     "union", "all", "case", "when", "then", "else", "end",
-    "insert", "into", "values", "create", "table", "update", "set", "delete",
-    "int", "double", "varchar", "primary", "key"
+    "insert", "into", "values", "create", "table", "update", "set", "delete", "drop",
+    "int", "double", "varchar", "primary", "key",
+    "begin", "transaction", "commit", "rollback",
   };
   
   private static final Terminals TERMS =

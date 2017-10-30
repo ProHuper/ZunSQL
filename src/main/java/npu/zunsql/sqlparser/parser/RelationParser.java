@@ -2,7 +2,6 @@ package npu.zunsql.sqlparser.parser;
 
 import java.util.List;
 
-import jdk.nashorn.internal.ir.Terminal;
 import npu.zunsql.sqlparser.ast.*;
 import org.jparsec.Parser;
 import org.jparsec.Parsers;
@@ -20,6 +19,10 @@ public final class RelationParser {
   static final Parser<?> INSERT_CLAUSE = TerminalParser.term("insert").next(TerminalParser.term("into"));
   static final Parser<?> UPDATE_CLAUSE = TerminalParser.term("update");
   static final Parser<?> CREATE_CLAUSE = TerminalParser.term("create").next(TerminalParser.term("table"));
+  static final Parser<?> DROP_CLAUSE = TerminalParser.term("drop").next(TerminalParser.term("table"));
+  static final Parser<?> BEGIN_CLAUSE = TerminalParser.term("begin").next(TerminalParser.term("transaction"));
+  static final Parser<?> COMMIT_CLAUSE = TerminalParser.term("commit");
+  static final Parser<?> ROLLBACK_CLAUSE = TerminalParser.term("rollback");
 
   static final Parser<Boolean> selectClause() {
     return TerminalParser.term("select").next(TerminalParser.term("distinct").succeeds());
@@ -110,7 +113,31 @@ public final class RelationParser {
               Create::new));
   }
 
+  static Parser<Relation> drop() {
+      return DROP_CLAUSE.next(TABLE_NAME.map(Drop::new));
+  }
+
+  static Parser<Relation> begin() {
+      return BEGIN_CLAUSE.retn(new Begin());
+  }
+
+  static Parser<Relation> commit() {
+      return COMMIT_CLAUSE.retn(new Commit());
+  }
+
+  static Parser<Relation> rollback() {
+      return ROLLBACK_CLAUSE.retn(new Rollback());
+  }
+
   public static Parser<Relation> Sql() {
-      return Parsers.or(select(), insert(), delete(), update(), create());
+      return Parsers.or(select(),
+              insert(),
+              delete(),
+              update(),
+              create(),
+              drop(),
+              begin(),
+              commit(),
+              rollback());
   }
 }
