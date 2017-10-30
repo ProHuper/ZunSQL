@@ -141,7 +141,7 @@
 ### Column getColumn();
 ### int getvalue_int();
 ### double getvalue_double();
-### String getvalue_String();
+`### String getvalue_String();
 
 
 
@@ -213,7 +213,7 @@
 	获取数据
 	成功返回data，失败返回空。
 
-### bool setData(List<BaseType>);
+### bool setData(Row thisRow);
 	修改数据
 	成功返回true，失败返回false。
 
