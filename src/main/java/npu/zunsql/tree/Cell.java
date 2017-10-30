@@ -5,6 +5,7 @@ package npu.zunsql.tree;
  */
 public class Cell
 {
+    //
     private Column ThisColumn;
     private Integer value;
     private Double dvalue;
