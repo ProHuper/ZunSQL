@@ -26,7 +26,7 @@
 	读事务：TT_READ，写事务：TT_WRITE
 	成功返回Transaction对象，失败返回0
 
-### Table CreateTable(String TableName，Column KeyColumn);
+### Table CreateTable(String TableName，List`<Column>` ColumnList);
 	添加一张表
 	成功返回Table，失败返回空。
 
