@@ -1,12 +1,18 @@
-约定假设：
-1.只有一个主数据库文件，每个数据库被存储在单个文件中
-
 数据库支持的数据类型：
 1.整数 Integer
 2.字符串 String
+3.浮点数 Float
+
+提供的寄存器
+p1,p2,p3	用于传递参数
+a1,a2 		通用寄存器，可用于存放中间结果
+
+line_no从0开始计算；
+虚拟机每次执行整个事务的代码；
+表达式指令中的var可以指代一个属性名，也可以指代一个寄存器名称,也可以是一个表名
 
 
-虚拟机支持的指令格式为：opcode(String) p1(String) p2(String) p3(String)
+虚拟机支持的指令格式为：opcode(Enum) p1(String) p2(String) p3(String)
 
 
 
@@ -15,115 +21,68 @@
 ——————————————————————————————————————————————————————————————————————————
 opcode                  p1              p2              p3
 ——————————————————————————————————————————————————————————————————————————
-[Next]                  ""              ""              ""
-[Rewind]                ""              ""              ""
-[Integer]               ""              ""              $int_value$
-[String]                ""              ""              $string_value$
-[OpenTable]             ""              ""              $table_name$
-[CloseTable]            ""              ""              $table_name$
+Next
+Goto                    $line_no$
+Achieve                 $table_name$
 
-Transaction             ""              ""              ""
-Commit                  ""              ""              ""
-Rollback                ""              ""              ""
+--------------------------------事务------------------------------------
+Transaction
+Commit
+Rollback
+--------------------------------事务------------------------------------
 
-CreateDB                ""              ""              $db_name$
-DropDB                  ""              ""              $db_name$
+--------------------------------数据库操作-------------------------------
+CreateDB                $db_name$
+DropDB                  $db_name$
+--------------------------------数据库操作-------------------------------
 
+--------------------------------创建表-----------------------------------
+CreateTable             $table_name$    $assemble_name$ $pk_name$
+--------------------------------创建表-----------------------------------
 
-CreateTable             ""              ""              $table_name$
-AddCol                  $col_name$      $col_type$      ""
-BeginPK
-AddPK                   $col_name$      ""
-EndPK
+--------------------------------删除表-----------------------------------
+DropTable               $table_name$
+--------------------------------删除表-----------------------------------
 
-DropTable               ""              ""              $table_name$
+--------------------------------插入信息---------------------------------
+Insert                  $table_name$    $assemble_name$
+--------------------------------插入信息---------------------------------
 
-Insert                  ""              ""              $table_name$
-BeginItem               ""              ""              ""
-AddItemCol              $col_name$      "col_type"      "value"
-EndItem                 ""              ""              ""
+--------------------------------删除信息---------------------------------
+Delete                  
+--------------------------------删除信息---------------------------------
 
-BeginFilter             ""              ""              ""
-And                     ""              ""              ""
-Or                      ""              ""              ""
-Filter                  $col_name$     $comp_type$     "comp_value"
-EndFilter               ""              ""              ""
+--------------------------------选择当前行-------------------------------
+Select
+--------------------------------选择当前行-------------------------------
 
-Delete                  ""              ""              $table_name$
+--------------------------------更新当前行-------------------------------
+Update                  $table_name$
+Set                     $col_name$      $value$
+--------------------------------更新当前行-------------------------------
 
-Select                  ""              ""              $table_name$
-BeginColSelect          ""              ""              ""
-AddColSelect            $col_name$      ""              ""
-EndColSelect            ""              ""              ""
+--------------------------------表达式指令-------------------------------
+Add 					$var_ans$		$var1$			$var2$
+Sub 					$var_ans$		$var1$			$var2$
+Mul 					$var_ans$		$var1$			$var2$
+Div 					$var_ans$		$var1$			$var2$
+And 					$var_ans$		$var1$			$var2$
+Not 					$var_ans$		$var1$
+Or 						$var_ans$		$var1$			$var2$
+In 						$var_ans$		$assemble_name$
+Is                      $var_ans$       $var1$
+Exists 					$var_ans$		$var1$
+AddConst 				$var_ans$		$var1$			$const_var$	
+SubConst 				$var_ans$		$var1$			$const_var$
+MulConst 				$var_ans$		$var1$			$const_var$		
+DivConst 				$var_ans$		$var1$			$const_var$
+AndConst				$var_ans$		$var1$			$const_var$	
+OrConst					$var_ans$		$var1$			$const_var$
+--------------------------------表达式指令-------------------------------
 
-Update                  ""              ""              $table_name$
-Set                     $col_name$      ""              $value$
-
-Execute                 ""              ""              ""
+-------------------------------创建固定集合------------------------------
+BeginAssemble
+AddItem 				$item_p1$		$item_p2$
+EndAssemble             $assemble_name$
+-------------------------------创建固定集合------------------------------
 ——————————————————————————————————————————————————————————————————————————
-
-[sql]
-delete * from table_1 where x=10 and y=100
-
-[bytecode]
-Transaction
-Delete "" "" table_1
-BeginFilter
-Filter "x" "Equal" "10"
-And
-Filter "y" "Equal" "100"
-EndFilter
-Execute
-Commit
-
-
-[sql]
-insert into table_1(x,y,z) values(1,2,"ccc")
-
-[bytecode]
-Transaction
-Insert "" "" table_1
-NewItem
-AddItemCol "x" "Integer" "1"
-AddItemCol "y" "Integer" "2"
-AddItemCol "z" "String" "ccc"
-WriteItem
-Execute
-Commit
-
-[sql]
-select a,b from t1 where x=1 or y>2
-
-[bytecode]
-Transaction
-Select "" "" t1
-BeginColSelect
-AddColSelect  "a"
-AddColSelect  "b"
-EndColSelect
-BeginFilter
-Filter "x" "Equal" "1"
-Or
-Filter "y" "Greater" "2"
-EndFilter
-Execute
-Commit
-
-[sql]
-create table test (
-    x Integer PRIMARY KEY,
-    y Integer,
-    z String
-)
-
-[bytecode]
-Transaction
-CreateTable "" "" "test"
-AddCol "x" "Integer" ""
-AddCol "y" "Integer" ""
-AddCol "z" "String" ""
-BeginPK "" "" ""
-AddPK  "x" "" ""
-EndPK "" "" ""
-Execute
-Commit
