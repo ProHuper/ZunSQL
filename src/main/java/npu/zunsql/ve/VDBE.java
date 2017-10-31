@@ -65,7 +65,7 @@ public class VDBE {
                 }
 
                 case Jump: {
-                    double bool = checkRegister(p2);
+                    double bool = registerInfo(p2);
                     if(bool == 0){
                         pc = Integer.valueOf(p1);
                         pc--;
@@ -354,6 +354,19 @@ public class VDBE {
         
         return 0;
         
+    }
+
+    private double registerInfo(String p){
+
+        if(p.equals("$1")){
+            return r1;
+        }
+
+        else if(p.equals("$2")){
+            return r2;
+        }
+
+        else return 0;
     }
 
     private void setRegister(String p, double value){
