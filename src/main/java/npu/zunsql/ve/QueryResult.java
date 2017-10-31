@@ -8,8 +8,7 @@ public class QueryResult
     private List<String> res;
     private List<Column> header;
 
-    public QueryResult(List<Column> pCol)
-    {
+    public QueryResult(List<Column> pCol) {
         header=new ArrayList<Column>(pCol);
         return;
     }

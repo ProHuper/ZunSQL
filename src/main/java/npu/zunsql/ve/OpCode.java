@@ -11,13 +11,18 @@ public enum OpCode{
 
     Next,
     Goto,
+    Jump,
     Achieve,
 
     CreateDB,
     DropDB,
+    OpenDB,
+    CloseDB,
 
     CreateTable,
     DropTable,
+    OpenTable,
+    CloseTable,
 
     Insert,
     Delete,
@@ -28,13 +33,23 @@ public enum OpCode{
     Add,
     Sub,
     Mul,
-    DIv,
+    Div,
+
     And,
     Not,
     Or,
+
+    GT,
+    LT,
+    LE,
+    GE,
+    EQ,
+    NE,
+
     In,
     Is,
     Exists,
+
     AddConst,
     SubConst,
     MulConst,

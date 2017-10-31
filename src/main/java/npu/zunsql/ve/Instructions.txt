@@ -9,7 +9,7 @@ a1,a2 		通用寄存器，可用于存放中间结果
 
 line_no从0开始计算；
 虚拟机每次执行整个事务的代码；
-表达式指令中的var可以指代一个属性名，也可以指代一个寄存器名称,也可以是一个表名
+表达式指令中的var可以指代一个属性名，也可以指代一个寄存器名称
 
 
 虚拟机支持的指令格式为：opcode(Enum) p1(String) p2(String) p3(String)
@@ -24,6 +24,7 @@ opcode                  p1              p2              p3
 Next
 Goto                    $line_no$
 Achieve                 $table_name$
+Jump					$line_no$		$var$
 
 --------------------------------事务------------------------------------
 Transaction
@@ -34,31 +35,22 @@ Rollback
 --------------------------------数据库操作-------------------------------
 CreateDB                $db_name$
 DropDB                  $db_name$
+OpenDB                  $db_name$
+CloseDB                 $db_name$
 --------------------------------数据库操作-------------------------------
 
---------------------------------创建表-----------------------------------
+--------------------------------表操作-----------------------------------
 CreateTable             $table_name$    $assemble_name$ $pk_name$
---------------------------------创建表-----------------------------------
-
---------------------------------删除表-----------------------------------
 DropTable               $table_name$
---------------------------------删除表-----------------------------------
+OpenTable               $table_name$
+CloseTable              $table_name$
+--------------------------------表操作-----------------------------------
 
---------------------------------插入信息---------------------------------
-Insert                  $table_name$    $assemble_name$
---------------------------------插入信息---------------------------------
-
---------------------------------删除信息---------------------------------
-Delete                  
---------------------------------删除信息---------------------------------
-
---------------------------------选择当前行-------------------------------
+--------------------------------记录操作---------------------------------
+Delete
 Select
---------------------------------选择当前行-------------------------------
-
---------------------------------更新当前行-------------------------------
-Update                  $table_name$
 Set                     $col_name$      $value$
+Insert                  $assemble_name$
 --------------------------------更新当前行-------------------------------
 
 --------------------------------表达式指令-------------------------------
@@ -66,17 +58,28 @@ Add 					$var_ans$		$var1$			$var2$
 Sub 					$var_ans$		$var1$			$var2$
 Mul 					$var_ans$		$var1$			$var2$
 Div 					$var_ans$		$var1$			$var2$
+
 And 					$var_ans$		$var1$			$var2$
-Not 					$var_ans$		$var1$
 Or 						$var_ans$		$var1$			$var2$
+Not 					$var_ans$		$var1$
+
+GT 						$var_ans$		$var1$			$var2$
+LE 						$var_ans$		$var1$			$var2$
+LT 						$var_ans$		$var1$			$var2$
+LE 						$var_ans$		$var1$			$var2$
+EQ 						$var_ans$		$var1$			$var2$
+NE 						$var_ans$		$var1$			$var2$
+
 In 						$var_ans$		$assemble_name$
 Is                      $var_ans$       $var1$
-Exists 					$var_ans$		$var1$
-AddConst 				$var_ans$		$var1$			$const_var$	
+Exists 					$var_ans$		$table_name$
+
+//
+AddConst 				$var_ans$		$var1$			$const_var$
 SubConst 				$var_ans$		$var1$			$const_var$
-MulConst 				$var_ans$		$var1$			$const_var$		
+MulConst 				$var_ans$		$var1$			$const_var$
 DivConst 				$var_ans$		$var1$			$const_var$
-AndConst				$var_ans$		$var1$			$const_var$	
+AndConst				$var_ans$		$var1$			$const_var$
 OrConst					$var_ans$		$var1$			$const_var$
 --------------------------------表达式指令-------------------------------
 
@@ -86,3 +89,20 @@ AddItem 				$item_p1$		$item_p2$
 EndAssemble             $assemble_name$
 -------------------------------创建固定集合------------------------------
 ——————————————————————————————————————————————————————————————————————————
+
+Next命令执行完毕后，如果有下一条记录，a1寄存器会被置1，否则置0
+
+delete from a where x=10 and y=20
+
+Transaction
+OpenTable a
+EQ a1 x 10
+EQ a2 y 20
+And a1 a1 a2
+Jump 8 a1
+Delete
+GOTO 10
+Next
+Jump 3 a1
+CloseTable a
+Commit
