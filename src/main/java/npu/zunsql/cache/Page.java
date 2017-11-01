@@ -1,8 +1,9 @@
 package npu.zunsql.cache;
 
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 
-public class Page
+public class Page implements Serializable
 {
     public static final int HEAD_SIZE = 0;
     public static final int PAGE_SIZE = 1024;

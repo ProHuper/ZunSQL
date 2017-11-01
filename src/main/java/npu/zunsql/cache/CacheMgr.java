@@ -1,10 +1,9 @@
 package npu.zunsql.cache;
 
-import com.sun.xml.internal.fastinfoset.tools.TransformInputOutput;
-
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -60,46 +59,68 @@ public class CacheMgr
      * 否则，页缺失，将副本页写入缓存中
      * 此时，若缓存已满，按照LRU策略将cacheList的第一页写入文件中
      */
-    public boolean commitTransation(int transID)
-    {
+    public boolean commitTransation(int transID) throws IOException {
         Transaction trans = transMgr.get(transID);
         List<Page> writePageList= transOnPage.get(transID);
+        File journal_file = new File(Integer.toString(transID)+"-journal");
+        File db_file = new File(this.dbName);
+
         for( int i = 0 ; i < writePageList.size() ; i++)
         {
             Page copyPage = writePageList.get(i);
             Page tempPage = this.cachePageMap.get(copyPage.pageID);
             //cache未命中
-            if(tempPage == null) {
+            if(tempPage == null)
+            {
                 //cache已满，按照LRU策略替换
                 if (this.cachePageMap.size() >= CacheMgr.CacheCapacity) {
-                    //按照LRU写回某一页,为写入的页腾出空间
-                    tempPage = cacheList.get(0);
-                    this.setPageToFile(tempPage);
-                    cacheList.remove(0);
+                    //按照LRU在cache的list和map中删除某一页的记录
+                    tempPage = this.cacheList.get(0);
+                    this.cacheList.remove(0);
                     this.cachePageMap.remove(tempPage.pageID);
 
-                    //在新的腾出的空间写入要写入的页
+                    //修改删除页对象的数据后，新加入cache的list和map中
                     tempPage.pageID = copyPage.pageID;
                     tempPage.pageBuffer.put(copyPage.pageBuffer);
                     this.cacheList.add(tempPage);
                     this.cachePageMap.put(copyPage.pageID, tempPage);
                 }
-                tempPage = new Page(copyPage);
-                this.cacheList.add(tempPage);
-                this.cachePageMap.put(tempPage.pageID, tempPage);
-            }
-
-            for( int j = 0 ; j < cacheList.size() ; j++)
-            {
-                Page jPage = cacheList.get(i);
-                if (jPage.pageID == copyPage.pageID)
+                //cache还有空间
+                else
                 {
-                    cacheList.remove(i);
+                    //新建页对象，记录在cache的list和map中
+                    tempPage = new Page(copyPage);
+                    this.cacheList.add(tempPage);
+                    this.cachePageMap.put(tempPage.pageID, tempPage);
                 }
             }
-            tempPage.pageID = copyPage.pageID;
-            tempPage.pageBuffer.put(copyPage.pageBuffer);
-            this.cacheList.add(tempPage);
+            //cache命中，修改cache中该页的数据
+            else
+            {
+                for( int j = 0 ; j < cacheList.size() ; j++)
+                {
+                    Page jPage = cacheList.get(i);
+                    if (jPage.pageID == copyPage.pageID)
+                    {
+                        cacheList.remove(i);
+                    }
+                }
+                tempPage.pageID = copyPage.pageID;
+                tempPage.pageBuffer.put(copyPage.pageBuffer);
+                this.cacheList.add(tempPage);
+            }
+
+            //写日志文件
+            if(journal_file.exists()&&journal_file.isFile())
+            {
+                ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(journal_file));
+                out.writeObject(tempPage);
+            }
+            //写直达，将该页同时写至数据库文件中
+            if(db_file.exists()&&db_file.isFile())
+            {
+                this.setPageToFile(tempPage, db_file);
+            }
         }
 
         trans.commit();
@@ -128,34 +149,46 @@ public class CacheMgr
      */
     public Page readPage(int transID, int pageID)
     {
+
         Page tempPage = null;
         tempPage = this.cachePageMap.get(pageID);
 
         //cache未命中
         if(tempPage == null)
         {
-            //cache已满，按照LRU策略替换
+            //cache已满，按照LRU策略替换，无需写回文件，删除cache中list和map记录即可
             if(this.cachePageMap.size() >= CacheMgr.CacheCapacity)
             {
-                tempPage = cacheList.get(0);
-                this.setPageToFile(tempPage);
-                cacheList.remove(0);
+                tempPage = this.cacheList.get(0);
+                this.cacheList.remove(0);
+                this.cachePageMap.remove(tempPage.pageID);
+
+                tempPage = getPageFromFile(pageID);
+                this.cacheList.add(tempPage);
+                this.cachePageMap.put(tempPage.pageID, tempPage);
             }
-            tempPage = getPageFromFile(pageID);
-            this.cacheList.add(tempPage);
-            this.cachePageMap.put(tempPage.pageID, tempPage);
-        }
-        //cache命中，按照LRU策略更新cacheList链表
-        for( int j = 0 ; j < cacheList.size() ; j++)
-        {
-            Page jPage = cacheList.get(j);
-            if (jPage.pageID == tempPage.pageID)
+            else
             {
-                cacheList.remove(jPage);
+                tempPage = getPageFromFile(pageID);
+                this.cacheList.add(tempPage);
+                this.cachePageMap.put(tempPage.pageID, tempPage);
             }
+
         }
-        this.cacheList.add(tempPage);
-        
+        //cache命中
+        else
+        {
+            //按照LRU策略更新cacheList链表
+            for( int j = 0 ; j < cacheList.size() ; j++)
+            {
+                Page jPage = cacheList.get(j);
+                if (jPage.pageID == tempPage.pageID)
+                {
+                    cacheList.remove(jPage);
+                }
+            }
+            this.cacheList.add(tempPage);
+        }
         return tempPage;
     }
 
@@ -167,27 +200,31 @@ public class CacheMgr
     {
         List<Page> writePageList= transOnPage.get(transID);
         writePageList.add(tempBuffer);
+
         return true;
     }
 
     /**将指定的某一页写回至内存
      *
      */
-    public boolean setPageToFile(Page tempPage)
+    public boolean setPageToFile(Page tempPage, File file)
     {
         FileChannel fc = null;
         try
         {
-            File file = new File(this.dbName);
             if(!file.exists())
             {
                 file.createNewFile();
             }
             RandomAccessFile fin = new RandomAccessFile(file, "rw");
             fc = fin.getChannel();
-            tempPage.pageBuffer.flip();
 
+            //独占锁
+            FileLock lock = fc.lock();
+
+            tempPage.pageBuffer.flip();
             fc.write(tempPage.pageBuffer, tempPage.pageID*Page.PAGE_SIZE);
+            lock.release();
 
         }
         catch (IOException e) {
@@ -209,6 +246,8 @@ public class CacheMgr
         }
         return true;
     }
+
+
     /**读取文件中的指定PageID页
      *
      */
@@ -222,9 +261,14 @@ public class CacheMgr
             RandomAccessFile fin = new RandomAccessFile(file, "rw");
             fc = fin.getChannel();
 
+            //共享锁
+            FileLock lock = fc.lock(0, Long.MAX_VALUE, true);
+
             ByteBuffer tempBuffer = ByteBuffer.allocate(Page.PAGE_SIZE);
             fc.read(tempBuffer, pageID*Page.PAGE_SIZE);
             tempPage = new Page(pageID, tempBuffer);
+
+            lock.release();
         }
         catch (IOException e) {
             e.printStackTrace();
