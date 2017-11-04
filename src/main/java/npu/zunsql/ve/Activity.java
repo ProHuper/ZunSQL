@@ -5,6 +5,5 @@ public enum Activity
 	Select,
 	Delete,
 	Update,
-	Insert,
-	Set
+	Insert
 }

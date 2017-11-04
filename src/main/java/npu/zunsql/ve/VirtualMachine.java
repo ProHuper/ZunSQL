@@ -12,7 +12,7 @@ public class VirtualMachine
 	List<AttrInstance> record;
 	List<Column> columns;
 	List<ByteCode> instuctions;
-	QueryResult result = null;
+	QueryResult result;
 
     String targetTable;
     String pkName;
@@ -27,6 +27,8 @@ public class VirtualMachine
 	boolean columnsReadOnly;
 	boolean selectedColumnsReadOnly;
 
+    Database db;
+
 	public VirtualMachine()
 	{
 		filtersReadOnly=true;
@@ -34,8 +36,12 @@ public class VirtualMachine
 		columnsReadOnly=true;
 		selectedColumnsReadOnly=true;
 
+        result=null;
 		activity=null;
 		targetTable=null;
+
+        //todo：这里需要约定数据库文件的名称，暂时定为db
+        db=new DataBase("db");
 	}
 
 	public QueryResult runAll(List<ByteCode> instuctions)
@@ -58,7 +64,7 @@ public class VirtualMachine
         {
             case Integer:
                 //暂未启用的指令
-                ;			break;
+                break;
 
             case Float:
                 //暂未启用的指令
@@ -217,10 +223,11 @@ public class VirtualMachine
             case AddTable:
                 tableName=p1;
                 //调用下层方法，加载p1表，将自然连接的结果存入joinResult
+                join(tableName);
                 break;
 
             case EndJoin:
-                //调用下层方法建树
+                //todo：调用下层方法建树
 
 
             case Set:
@@ -257,4 +264,25 @@ public class VirtualMachine
         System.out.println(info);
     }
 
+    private void join(string tableName)
+    {
+        Table table=db.GetTable(tableName);
+        Cursor p=new Cursor(table);
+
+
+        //todo:需要下层提供可以访问表头的方法用以构造QueryResult的表头
+        //todo:构造用于存放本次结果的临时表
+        //QueryResult iterObj=
+
+        //填充数据
+        int count=joinResult.res.size()/joinResult.header.size();
+        for(int i=0;i<count;i++)
+        {
+            while(p!=null)
+            {
+                //todo:判断p所指向的条目是否与joinResult中第i项满足构成自然连接的条件
+            }
+        }
+        
+    }
 }

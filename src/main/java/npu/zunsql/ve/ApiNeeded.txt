@@ -1,9 +1,0 @@
-int buildBTree(QueryResult queryResult);
-int createTable(String name,String[] colName,String[] colType);
-int dropTable(String name);
-int createDB(String name);
-int dropDB(String name);
-int insertItem(ItemStruct item);
-iterator init(String name);
-iterator next(iterator p);
-iterator delete(iterator p);
