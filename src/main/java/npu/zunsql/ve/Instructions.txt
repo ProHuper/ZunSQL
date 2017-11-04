@@ -1,93 +1,93 @@
-约定假设：
-1.只有一个主数据库文件，每个数据库被存储在单个文件中
+约定：
+1.不支持计算
 
 数据库支持的数据类型：
 1.整数 Integer
 2.字符串 String
+3.浮点型 Float
 
 
 虚拟机支持的指令格式为：opcode(String) p1(String) p2(String) p3(String)
-
-
 
                             支持指令一览表
 
 ——————————————————————————————————————————————————————————————————————————
 opcode                  p1              p2              p3
 ——————————————————————————————————————————————————————————————————————————
-[Next]                  ""              ""              ""
-[Rewind]                ""              ""              ""
-[Integer]               ""              ""              $int_value$
-[String]                ""              ""              $string_value$
-[OpenTable]             ""              ""              $table_name$
-[CloseTable]            ""              ""              $table_name$
+Integer              	                                int_value
+String               	                                string_value
+Float													float_value
 
-Transaction             ""              ""              ""
-Commit                  ""              ""              ""
-Rollback                ""              ""              ""
+Transaction                                               
+Commit                                                    
+Rollback                                                  
 
-CreateDB                ""              ""              $db_name$
-DropDB                  ""              ""              $db_name$
+CreateDB                                                db_name
+DropDB                                                  db_name
 
+CreateTable                                             table_name
+DropTable                                               table_name
 
-CreateTable             ""              ""              $table_name$
-AddCol                  $col_name$      $col_type$      ""
+Insert                                                  table_name
+Delete                                                  table_name
+Select                                                  table_name
+Update                                                  table_name
+
+AddCol                  col_name      col_type        
+
 BeginPK
-AddPK                   $col_name$      ""
+AddPK                   col_name        
 EndPK
 
-DropTable               ""              ""              $table_name$
+BeginItem                                                 
+AddItemCol              col_name      col_type      value
+EndItem                                                   
 
-Insert                  ""              ""              $table_name$
-BeginItem               ""              ""              ""
-AddItemCol              $col_name$      "col_type"      "value"
-EndItem                 ""              ""              ""
+BeginFilter                                                 
+Filter                  col_name     comp_type     comp_value
+EndFilter                                                 
 
-BeginFilter             ""              ""              ""
-And                     ""              ""              ""
-Or                      ""              ""              ""
-Filter                  $col_name$     $comp_type$     "comp_value"
-EndFilter               ""              ""              ""
+BeginColSelect                                            
+AddColSelect            col_name                        
+EndColSelect                                              
 
-Delete                  ""              ""              $table_name$
+Set                     col_name                      value
 
-Select                  ""              ""              $table_name$
-BeginColSelect          ""              ""              ""
-AddColSelect            $col_name$      ""              ""
-EndColSelect            ""              ""              ""
+And                                                       
+Or 
+Not
 
-Update                  ""              ""              $table_name$
-Set                     $col_name$      ""              $value$
-
-Execute                 ""              ""              ""
+Execute                                                   
 ——————————————————————————————————————————————————————————————————————————
 
+示例（参数位置请参照指令表，空参数连带其位置会被省略）
+
 [sql]
-delete * from table_1 where x=10 and y=100
+delete from table_1 where x=10 and y=100
 
 [bytecode]
 Transaction
-Delete "" "" table_1
+Delete table_1
 BeginFilter
-Filter "x" "Equal" "10"
+Filter x Equal 10
 And
-Filter "y" "Equal" "100"
+Filter y Equal 100
 EndFilter
 Execute
 Commit
 
 
 [sql]
-insert into table_1(x,y,z) values(1,2,"ccc")
+insert into table_1(x,y,z) values(1,2,ccc)
 
 [bytecode]
 Transaction
-Insert "" "" table_1
-NewItem
-AddItemCol "x" "Integer" "1"
-AddItemCol "y" "Integer" "2"
-AddItemCol "z" "String" "ccc"
-WriteItem
+Insert table_1
+BeginItem
+AddItemCol x Integer 1
+AddItemCol y Integer 2
+AddItemCol z String ccc
+EndItem
 Execute
 Commit
 
@@ -96,34 +96,34 @@ select a,b from t1 where x=1 or y>2
 
 [bytecode]
 Transaction
-Select "" "" t1
+Select t1
 BeginColSelect
-AddColSelect  "a"
-AddColSelect  "b"
+AddColSelect a
+AddColSelect b
 EndColSelect
 BeginFilter
-Filter "x" "Equal" "1"
+Filter x Equal 1
 Or
-Filter "y" "Greater" "2"
+Filter y Greater 2
 EndFilter
 Execute
 Commit
 
 [sql]
 create table test (
-    x Integer PRIMARY KEY,
-    y Integer,
-    z String
+ x Integer PRIMARY KEY,
+ y Integer,
+ z String
 )
 
 [bytecode]
 Transaction
-CreateTable "" "" "test"
-AddCol "x" "Integer" ""
-AddCol "y" "Integer" ""
-AddCol "z" "String" ""
-BeginPK "" "" ""
-AddPK  "x" "" ""
-EndPK "" "" ""
+CreateTable test
+AddCol x Integer 
+AddCol y Integer 
+AddCol z String 
+BeginPK 
+AddPK x 
+EndPK 
 Execute
 Commit

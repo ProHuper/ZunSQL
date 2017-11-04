@@ -1,51 +1,28 @@
 package npu.zunsql.ve;
 
-import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.List;
 
 public class QueryResult
 {
-    private int colSize;
-    private int rowSize;
-    private String[][] res;
-    private String[] header;
+    private List<String> res;
+    private List<Column> header;
 
-    public int getColSize()
-    {
-        return colSize;
+    public QueryResult(List<Column> pCol) {
+        header=new ArrayList<Column>(pCol);
+        return;
     }
 
-    public int getRowSize()
+    public boolean addRecord(List<String> pRecord)
     {
-        return rowSize;
+        return res.addAll(pRecord);
     }
 
-    public String[][] getRes()
-    {
-        return res;
-    }
-
-    public String[] getHeader()
-    {
+    public List<Column> getHeader() {
         return header;
     }
 
-    public void setColSize(int colSize)
-    {
-        this.colSize = colSize;
-    }
-
-    public void setRowSize(int rowSize)
-    {
-        this.rowSize = rowSize;
-    }
-
-    public void setRes(String[][] res)
-    {
-        this.res = res;
-    }
-
-    public void setHeader(String[] header)
-    {
-        this.header = header;
+    public List<String> getRes() {
+        return res;
     }
 }
