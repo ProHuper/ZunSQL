@@ -44,5 +44,9 @@ public enum OpCode{
     Filter,
     EndFilter,
 
+    BeginJoin,
+    AddTable,
+    EndJoin,
+
     Execute
 }
