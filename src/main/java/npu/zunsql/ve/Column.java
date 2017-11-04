@@ -1,12 +1,13 @@
 package npu.zunsql.ve;
 
-public class Column
+class Column
 {
-	String columnName;
-	String columnType;
-
-	public Column(String columnName, String columnType){
-		this.columnName = columnName;
-		this.columnType = columnType;
+	String ColumnName;
+	String ColumnType;
+	
+	public Column(String pName,String pType)
+	{
+		ColumnName=pName;
+		ColumnType=pType;
 	}
 }

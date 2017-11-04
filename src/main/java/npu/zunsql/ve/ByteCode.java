@@ -1,8 +1,5 @@
 package npu.zunsql.ve;
 
-/**
- * Created by Huper on 2017/10/30.
- */
 public class ByteCode {
 
     public OpCode opCode;

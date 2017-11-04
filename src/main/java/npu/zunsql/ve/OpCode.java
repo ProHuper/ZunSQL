@@ -1,28 +1,20 @@
 package npu.zunsql.ve;
 
-/**
- * Created by Huper on 2017/10/30.
- */
 public enum OpCode{
 
     Transaction,
     Commit,
     Rollback,
 
-    Next,
-    Goto,
-    Jump,
-    Achieve,
+    Integer,
+    String,
+    Float,
 
     CreateDB,
     DropDB,
-    OpenDB,
-    CloseDB,
 
     CreateTable,
     DropTable,
-    OpenTable,
-    CloseTable,
 
     Insert,
     Delete,
@@ -30,35 +22,27 @@ public enum OpCode{
     Update,
     Set,
 
-    Add,
-    Sub,
-    Mul,
-    Div,
-
     And,
     Not,
     Or,
 
-    GT,
-    LT,
-    LE,
-    GE,
-    EQ,
-    NE,
+    AddCol,
 
-    In,
-    Is,
-    Exists,
+    BeginPK,
+    AddPK,
+    EndPK,
 
-    AddConst,
-    SubConst,
-    MulConst,
-    DivConst,
-    AndConst,
-    OrConst,
+    BeginItem,
+    AddItemCol,
+    EndItem,
 
-    BeginAssemble,
-    AddItem,
-    EndAssemble
+    BeginColSelect,
+    AddColSelect,
+    EndColSelect,
 
+    BeginFilter,
+    Filter,
+    EndFilter,
+
+    Execute
 }
