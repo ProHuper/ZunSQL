@@ -2,6 +2,7 @@ package npu.zunsql.tree;
 
 import javafx.scene.control.Cell;
 
+import javax.lang.model.type.NullType;
 import java.util.List;
 
 /**
@@ -13,10 +14,6 @@ public class Table
     public final static int TT_READ = 1;
     public final static int TT_WRITE = 2;
 
-    public final static int CT_INT = 1;
-    public final static int CT_DOUBLE = 2;
-    public final static int CT_STRING = 3;
-
     public final static int LO_LockED = 1;
     public final static int LO_SHARED = 2;
 
@@ -24,7 +21,7 @@ public class Table
     private String tableName;
     private Column key;
     private List<Column> otherColumn;
-    private Cell rootRow;
+    private Row rootRow;
 
     public Table(String TName,Column keyColumn,List<Column> otherColumnPass)
     {
@@ -33,13 +30,22 @@ public class Table
         otherColumn = otherColumnPass;
     }
 
-    public boolean drop()
+    public boolean drop()       //rootRow清空
     {
+        lock = null;
+        tableName = null;
+        key = null;
+        otherColumn.clear();
+        rootRow= null;
         return true;
     }
 
-    public boolean clear()
+    public boolean clear()      //rootRow不清空
     {
+        lock = null;
+        tableName = null;
+        key = null;
+        otherColumn.clear();
         return true;
     }
 
@@ -58,10 +64,9 @@ public class Table
         lock = lockpass;   //NULL
     }
 
-    public Cursor createCursor(String tableName)
+    public Cursor createCursor()
     {
-        Table table = new Table(tableName, key, otherColumn);
-        Cursor cursor = new Cursor(table);
+        Cursor cursor = new Cursor(this);
         return cursor;  //NULL
     }
 }
