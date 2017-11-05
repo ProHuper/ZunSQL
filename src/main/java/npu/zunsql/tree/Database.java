@@ -18,11 +18,18 @@ public class Database
         dataBaseName = name;
     }
 
-    //开始一个事务操作
-    public Transaction beginTrans(int transType)
+    //开始一个读事务操作
+    public Transaction beginReadTrans()
     {
-        Transaction transaction = new Transaction(1);
-        return transaction; //0
+        ReadTran readTran = new ReadTran(1);
+        return readTran; //0
+    }
+
+    //开始一个写事务
+    public Transaction beginWriteTrans()
+    {
+        WriteTran WriteTran = new WriteTran(1);
+        return WriteTran; //0
     }
 
     //根据传来的表名，主键以及其他的列名来新建一个表放入tableList中
