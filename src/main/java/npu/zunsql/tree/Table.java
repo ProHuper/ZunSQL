@@ -24,7 +24,7 @@ public class Table
     private String TableName;
     private Column Key;
     private List<Column> OtherColumn;
-    private Cell RootRow;
+    private Row RootRow;
 
     public Table(String TName,Column KeyColumn,List<Column> OtherColumnPass)
     {
@@ -41,12 +41,12 @@ public class Table
 //        }
     }
 
-    public boolean Drop()
+    public boolean Drop(Transaction thistran)
     {
         return true;
     }
 
-    public boolean Clear()
+    public boolean Clear(Transaction thistran)
     {
         return true;
     }

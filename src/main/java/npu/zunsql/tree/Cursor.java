@@ -45,27 +45,17 @@ public class Cursor
         return true;
     }
 
-    public boolean MovetoUnpacked(Integer key)
+    public boolean MovetoUnpacked(Cell keycell)
     {
         return true;
     }
 
-    public boolean MovetoUnpacked(Double key)
+    public boolean Delete(Transaction thistran)
     {
         return true;
     }
 
-    public boolean MovetoUnpacked(String key)
-    {
-        return true;
-    }
-
-    public boolean Delete()
-    {
-        return true;
-    }
-
-    public boolean Insert(Row thisRow)
+    public boolean Insert(Transaction thistran,Row thisRow)
     {
         return true;
     }
@@ -92,7 +82,7 @@ public class Cursor
         return 1;
     }
 
-    public boolean setData(Row row)
+    public boolean setData(Transaction thistran,Row row)
     {
         thisRow = row;
         return true;
