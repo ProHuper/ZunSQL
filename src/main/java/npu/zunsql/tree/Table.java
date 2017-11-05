@@ -10,42 +10,37 @@ import java.util.List;
  */
 public class Table
 {
-
-    public final static int TT_READ = 1;
-    public final static int TT_WRITE = 2;
-
-    public final static int LO_LockED = 1;
+    public final static int LO_LOCKED = 1;
     public final static int LO_SHARED = 2;
 
     private Integer lock;
     private String tableName;
-    private Column key;
+    private Column keyColumn;
     private List<Column> otherColumn;
     private Row rootRow;
 
-    public Table(String TName,Column keyColumn,List<Column> otherColumnPass)
+    public Table(String name,Column key,List<Column> others)
     {
-        tableName = TName;
-        key = keyColumn;
-        otherColumn = otherColumnPass;
+        tableName = name;
+        keyColumn = key;
+        otherColumn = others;
+        lock = LO_SHARED;
+        rootRow = null;
     }
 
-    public boolean drop()       //rootRow清空
+    public boolean drop()
     {
         lock = null;
         tableName = null;
-        key = null;
+        keyColumn = null;
         otherColumn.clear();
         rootRow= null;
         return true;
     }
 
-    public boolean clear()      //rootRow不清空
+    public boolean clear()
     {
-        lock = null;
-        tableName = null;
-        key = null;
-        otherColumn.clear();
+        rootRow = null;
         return true;
     }
 
@@ -54,14 +49,28 @@ public class Table
         return tableName;   //NULL
     }
 
-    public Integer getLock()
+    public boolean isLocked()
     {
-        return lock;   //NULL
+        if (lock == LO_LOCKED)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 
-    public void setLock(Integer lockpass)
+    public boolean lock()
     {
-        lock = lockpass;   //NULL
+        lock = LO_LOCKED;   //NULL
+        return true;
+    }
+
+    public boolean unLock()
+    {
+        lock = LO_SHARED;   //NULL
+        return true;
     }
 
     public Cursor createCursor()

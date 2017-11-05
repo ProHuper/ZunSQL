@@ -5,18 +5,16 @@ package npu.zunsql.tree;
  */
 public class Transaction
 {
+    public final static int TT_READ = 1;
+    public final static int TT_WRITE = 2;
 
     private Integer tranNum;
 
-    public Transaction(Integer tranNum)
+    public Transaction(Integer number)
     {
-
+        tranNum = number;
     }
 
-//    public boolean BeginTrans(Integer TransType)
-//    {
-//        return true;
-//    }
 
     public boolean Commit()
     {
@@ -28,9 +26,4 @@ public class Transaction
         return true;
     }
 
-//    public Cursor CreateCursor(Table Mytree)
-//    {
-//        Cursor cursor = new Cursor();
-//        return cursor;
-//    }
 }

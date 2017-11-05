@@ -13,9 +13,9 @@ public class Database
     private String dataBaseName;
     private List<Table> tableList;
 
-    public Database(String DBName)
+    public Database(String name)
     {
-        dataBaseName = DBName;
+        dataBaseName = name;
     }
 
     public Transaction beginTrans(int transType)
@@ -24,29 +24,28 @@ public class Database
         return transaction; //0
     }
 
-    public Table createTable(String tableName, List<Column> columnList)
+    public Table createTable(String tableName, Column key, List<Column> otherColumnList, Transaction trans)
     {
-        Table table = new Table(tableName,columnList.get(0), columnList);
+        Table table = new Table(tableName, key, otherColumnList);
         tableList.add(table);
         return table;   //NULL
     }
 
     public Table getTable(String tableName)
     {
-        int i;
-        for(i = 0;i < tableList.size();i++)
+        for(int i = 0; i < tableList.size(); i++)
         {
-            if(tableName == tableList.get(i).getTableName())
+            if(tableList.get(i).getTableName().contentEquals(tableName))
             {
-                break;
+                return tableList.get(i);
             }
         }
-        return tableList.get(i);
+        return null;
     }
 
     public boolean lock()
     {
-        if(tableList.get(0).getLock() == 1)
+        if(tableList.get(0).isLocked())
         {
             return false;
         }
@@ -54,7 +53,7 @@ public class Database
         {
             for (int i = 0; i < tableList.size(); i++)
             {
-                tableList.get(i).setLock(1);    //给它上锁
+                tableList.get(i).lock();    //给它上锁
             }
             return true;
         }
@@ -62,11 +61,11 @@ public class Database
 
     public boolean unLock()
     {
-        if(tableList.get(0).getLock() == 1)
+        if(tableList.get(0).isLocked())
         {
             for (int i = 0; i < tableList.size(); i++)
             {
-                tableList.get(i).setLock(2); //给它解锁
+                tableList.get(i).unLock(); //给它解锁
             }
             return true;
         }
