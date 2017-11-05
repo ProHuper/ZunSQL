@@ -2,6 +2,7 @@ package npu.zunsql.tree;
 
 import javafx.scene.control.Cell;
 
+import javax.lang.model.type.NullType;
 import java.util.List;
 
 /**
@@ -11,55 +12,61 @@ public class Table
 {
 
     public final static int TT_READ = 1;
-    public final static int TT_WRITE = 1;
+    public final static int TT_WRITE = 2;
 
-    public final static int CT_INT = 1;
-    public final static int CT_DOUBLE = 1;
-    public final static int CT_STRING = 1;
+    public final static int LO_LockED = 1;
+    public final static int LO_SHARED = 2;
 
-    public final static int LO_LOCKED = 1;
-    public final static int LO_SHARED = 1;
+    private Integer lock;
+    private String tableName;
+    private Column key;
+    private List<Column> otherColumn;
+    private Row rootRow;
 
-    private Integer Lock;
-    private String TableName;
-    private Column Key;
-    private List<Column> OtherColumn;
-    private Row RootRow;
-
-    public Table(String TName,Column KeyColumn,List<Column> OtherColumnPass)
+    public Table(String TName,Column keyColumn,List<Column> otherColumnPass)
     {
-        TableName = TName;
-        Key = KeyColumn;
-        OtherColumn = OtherColumnPass;
-//        for(int i = 0; i < OtherColumn.getColumnType().size(); i++)
-//        {
-//            ColumnType1.add((Integer)column.getColumnType().get(i));
-//        }
-//        for(int i = 0; i < column.getColumnName().size(); i++)
-//        {
-//            ColumnName1.add((String)column.getColumnName().get(i));
-//        }
+        tableName = TName;
+        key = keyColumn;
+        otherColumn = otherColumnPass;
     }
 
-    public boolean Drop(Transaction thistran)
+    public boolean drop()       //rootRow清空
     {
+        lock = null;
+        tableName = null;
+        key = null;
+        otherColumn.clear();
+        rootRow= null;
         return true;
     }
 
-    public boolean Clear(Transaction thistran)
+    public boolean clear()      //rootRow不清空
     {
+        lock = null;
+        tableName = null;
+        key = null;
+        otherColumn.clear();
         return true;
     }
 
-    public String GetTableName()
+    public String getTableName()
     {
-        return TableName;   //NULL
+        return tableName;   //NULL
     }
 
-    public Cursor CreateCursor(String TableName)
+    public Integer getLock()
     {
-        Table table = new Table(TableName, Key, OtherColumn);
-        Cursor cursor = new Cursor(table);
+        return lock;   //NULL
+    }
+
+    public void setLock(Integer lockpass)
+    {
+        lock = lockpass;   //NULL
+    }
+
+    public Cursor createCursor()
+    {
+        Cursor cursor = new Cursor(this);
         return cursor;  //NULL
     }
 }

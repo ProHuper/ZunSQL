@@ -17,32 +17,5 @@ public class Column
     {
 
     }
-//    private List<Integer> ColumnType;
-//    private List<String> ColumnName;
-//
-//    public void setColumnType(List<Integer> ColumnTypePass)
-//    {
-//        for (int i = 0; i < ColumnTypePass.size(); i++)
-//        {
-//            ColumnType.add((Integer)ColumnTypePass.get(i));
-//        }
-//    }
-//
-//    public void setColumnName(List<String> ColumnNamePass)
-//    {
-//        for (int i = 0; i < ColumnNamePass.size(); i++)
-//        {
-//            ColumnName.add((String)ColumnNamePass.get(i));
-//        }
-//    }
-//
-//    public List<Integer> getColumnType()
-//    {
-//        return ColumnType;
-//    }
-//
-//    public List<String> getColumnName()
-//    {
-//        return ColumnName;
-//    }
+
 }
