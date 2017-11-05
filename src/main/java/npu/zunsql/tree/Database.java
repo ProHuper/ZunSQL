@@ -1,7 +1,5 @@
 package npu.zunsql.tree;
 
-import javafx.scene.control.Tab;
-
 import java.util.List;
 
 /**
@@ -9,21 +7,25 @@ import java.util.List;
  */
 public class Database
 {
-
+    //表示dataBase的名字
     private String dataBaseName;
+    //数据库中表的list的集合
     private List<Table> tableList;
 
+    //初始化数据库的名称
     public Database(String name)
     {
         dataBaseName = name;
     }
 
+    //开始一个事务操作
     public Transaction beginTrans(int transType)
     {
         Transaction transaction = new Transaction(1);
         return transaction; //0
     }
 
+    //根据传来的表名，主键以及其他的列名来新建一个表放入tableList中
     public Table createTable(String tableName, Column key, List<Column> otherColumnList, Transaction trans)
     {
         Table table = new Table(tableName, key, otherColumnList);
@@ -31,6 +33,7 @@ public class Database
         return table;   //NULL
     }
 
+    //根据传来的表名返回Table表对象
     public Table getTable(String tableName)
     {
         for(int i = 0; i < tableList.size(); i++)
@@ -43,6 +46,7 @@ public class Database
         return null;
     }
 
+    //给整个数据库中的表全部加锁
     public boolean lock()
     {
         if(tableList.get(0).isLocked())
@@ -59,6 +63,7 @@ public class Database
         }
     }
 
+    //给数据库中全部的表解锁
     public boolean unLock()
     {
         if(tableList.get(0).isLocked())
