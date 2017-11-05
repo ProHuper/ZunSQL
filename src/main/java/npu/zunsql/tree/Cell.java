@@ -5,45 +5,70 @@ package npu.zunsql.tree;
  */
 public class Cell
 {
-    //
-    private Column ThisColumn;
+    // cell中包含一个column类型的column用于表示本cell所属的列。
+    private Column thisColumn;
+
+    // cell中包含三种类型的值，int、double、String。
+    // 每个cell有且仅有一个变量的值有效。
+    // 根据Column的type判断cell中的哪个值可用。
     private Integer value;
-    private Double dvalue;
-    private String Svalue;
+    private Double dValue;
+    private String sValue;
 
-    public Cell(Column ThisColumn, Integer ThisValue)
+    // 根据不同的cell类型提供不同的cell构造方法，主要包括int、double、string。
+    public Cell(Column givenColumn, Integer givenValue)
     {
-
+        thisColumn = givenColumn;
+        value = givenValue;
+        dValue = 0.0;
+        sValue = "";
     }
 
-    public Cell(Column ThisColumn, Double ThisValue)
+    public Cell(Column givenColumn, Double givenValue)
     {
-
+        thisColumn = givenColumn;
+        dValue = givenValue;
+        value = 0;
+        sValue = "";
     }
 
-    public Cell(Column ThisColumn, String  ThisValue)
+    public Cell(Column givenColumn, String  givenValue)
     {
-
+        thisColumn = givenColumn;
+        sValue = givenValue;
+        dValue = 0.0;
+        value = 0;
     }
 
+    // 返回列类型。
+    // 输入参数：无。
+    // 输出参数：column类型。
     public Column getColumn()
     {
-        Column column = new Column(1," ");
-        return column;
+        return thisColumn;
     }
 
-    public Integer getvalue_int()
+    // 返回本单元的int值。
+    // 输入参数：无。
+    // 输出参数：Integer类型。
+    public Integer getValue_Int()
     {
-        return 1;
+        return value;
     }
 
-    public Double getvalue_double()
+    // 返回本单元的double值。
+    // 输入参数：无。
+    // 输出参数：Double类型。
+    public Double getValue_Double()
     {
-        return 1.0;
+        return dValue;
     }
 
-    public String getvalue_String()
+    // 返回本单元的String值
+    // 输入参数：无
+    // 输出参数：String类型。
+    public String getValue_String()
     {
-        return " ";
+        return sValue;
     }
 }
