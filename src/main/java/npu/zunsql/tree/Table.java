@@ -2,6 +2,7 @@ package npu.zunsql.tree;
 
 import javafx.scene.control.Cell;
 
+import javax.lang.model.type.NullType;
 import java.util.List;
 
 /**
@@ -20,7 +21,7 @@ public class Table
     private String tableName;
     private Column key;
     private List<Column> otherColumn;
-    private Cell rootRow;
+    private Row rootRow;
 
     public Table(String TName,Column keyColumn,List<Column> otherColumnPass)
     {
@@ -31,22 +32,19 @@ public class Table
 
     public boolean drop()       //rootRow清空
     {
-        lock = LO_SHARED;
-        tableName = " ";
-        Column column = new Column(0, " ");
-        key = column;
+        lock = null;
+        tableName = null;
+        key = null;
         otherColumn.clear();
-        Cell empty = new Cell();
-        rootRow = empty;
+        rootRow= null;
         return true;
     }
 
     public boolean clear()      //rootRow不清空
     {
-        lock = LO_SHARED;
-        tableName = " ";
-        Column column = new Column(0, " ");
-        key = column;
+        lock = null;
+        tableName = null;
+        key = null;
         otherColumn.clear();
         return true;
     }
