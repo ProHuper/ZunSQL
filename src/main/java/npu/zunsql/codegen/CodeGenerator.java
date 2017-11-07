@@ -111,13 +111,12 @@ public class CodeGenerator {
                         Update update = (Update)statement;
                         String table = update.table.tableName.names.get(0);
                         ret.add(new Instruction(OpCode.Update, null, null, table));
-
-                        Expression where = update.where;
-                        ret.addAll(WhereToInstruction(where));
                         for (Assignment a: update.updates) {
                             String name = a.name.names.get(0);
-                            // TODO(Cholerae): set translation
+                            ret.add(new Instruction(OpCode.Set, name, null, a.value.toString()));
                         }
+                        Expression where = update.where;
+                        ret.addAll(WhereToInstruction(where));
                     }
                 }
                 ret.add(new Instruction(OpCode.Execute, null, null, null));

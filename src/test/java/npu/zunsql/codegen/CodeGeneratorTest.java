@@ -131,4 +131,21 @@ public class CodeGeneratorTest {
                         new Instruction(OpCode.Commit, null, null, null)
                 ));
     }
+
+    @Test
+    public void testGenerateByteCodeUpdate() {
+        assertEquals(
+                CodeGenerator.GenerateByteCode(Arrays.asList(Parser.parse("update t1 set x = 1, y = 2 where y = 2"))),
+                Arrays.asList(
+                        new Instruction(OpCode.Transaction, null, null, null),
+                        new Instruction(OpCode.Update, null, null, "t1"),
+                        new Instruction(OpCode.Set, "x", null, "1"),
+                        new Instruction(OpCode.Set, "y", null, "2"),
+                        new Instruction(OpCode.BeginFilter, null, null, null),
+                        new Instruction(OpCode.Filter, "y", "=", "2"),
+                        new Instruction(OpCode.EndFilter, null, null, null),
+                        new Instruction(OpCode.Execute, null, null, null),
+                        new Instruction(OpCode.Commit, null, null, null)
+                ));
+    }
 }
