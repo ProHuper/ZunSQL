@@ -36,3 +36,4 @@ buildNumber.properties
 
 # Intellij IDEA
 *.iml
+.idea/
