@@ -69,4 +69,12 @@ public class Table
         Cursor cursor = new Cursor(this);
         return cursor;  //NULL
     }
+    public Column getKeyColumn()
+    {
+        return key;
+    }
+    public List<Column> getOtherColumn()
+    {
+        return otherColumn;
+    }
 }
