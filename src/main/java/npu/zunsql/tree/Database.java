@@ -18,6 +18,12 @@ public class Database
         dataBaseName = name;
     }
 
+
+    public boolean drop()
+    {
+        return true;
+    }
+
     //开始一个读事务操作
     public Transaction beginReadTrans()
     {
