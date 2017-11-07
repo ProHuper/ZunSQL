@@ -40,6 +40,15 @@ public class Cell
         value = 0;
     }
 
+    public boolean bigerThan(Cell cell)
+    {
+        return thisColumn.isBigger(this,cell);
+    }
+
+    public boolean equalTo(Cell cell)
+    {
+        return thisColumn.isEqual(this,cell);
+    }
     // 返回列类型。
     // 输入参数：无。
     // 输出参数：column类型。

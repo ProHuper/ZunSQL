@@ -12,12 +12,11 @@ public class Table
 {
     public final static int LO_LOCKED = 1;
     public final static int LO_SHARED = 2;
-
     private Integer lock;
     private String tableName;
     private Column keyColumn;
     private List<Column> otherColumn;
-    private Row rootRow;
+    private Node rootNode;
 
     public Table(String name,Column key,List<Column> others)
     {
@@ -25,7 +24,7 @@ public class Table
         keyColumn = key;
         otherColumn = others;
         lock = LO_SHARED;
-        rootRow = null;
+        rootNode = new Node();
     }
 
     public boolean drop()
@@ -34,15 +33,16 @@ public class Table
         tableName = null;
         keyColumn = null;
         otherColumn.clear();
-        rootRow= null;
+        rootNode = new Node();
         return true;
     }
 
     public boolean clear()
     {
-        rootRow = null;
+        rootNode = new Node();
         return true;
     }
+
 
     public String getTableName()
     {
@@ -59,6 +59,11 @@ public class Table
         {
             return false;
         }
+    }
+
+    protected Node getRootNode()
+    {
+        return rootNode;
     }
 
     public boolean lock()
