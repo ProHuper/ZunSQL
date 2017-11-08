@@ -124,6 +124,23 @@ public class CodeGeneratorTest {
                         new Instruction(OpCode.Execute, null, null, null),
                         new Instruction(OpCode.Commit, null, null, null)
                 ));
+        assertEquals(
+                CodeGenerator.GenerateByteCode(Arrays.asList(Parser.parse("delete from table_1 where x=(10-1)*3"))),
+                Arrays.asList(
+                        new Instruction(OpCode.Transaction, null, null, null),
+                        new Instruction(OpCode.Delete, null, null, "table_1"),
+                        new Instruction(OpCode.BeginFilter, null, null, null),
+                        new Instruction(OpCode.Operand, "x", null, null),
+                        new Instruction(OpCode.Operand, null, "10", null),
+                        new Instruction(OpCode.Operand, null, "1", null),
+                        new Instruction(OpCode.Operator, "Sub", null, null),
+                        new Instruction(OpCode.Operand, null, "3", null),
+                        new Instruction(OpCode.Operator, "Mul", null, null),
+                        new Instruction(OpCode.Operator, "EQ", null, null),
+                        new Instruction(OpCode.EndFilter, null, null, null),
+                        new Instruction(OpCode.Execute, null, null, null),
+                        new Instruction(OpCode.Commit, null, null, null)
+                ));
     }
 
     @Test

@@ -3,14 +3,9 @@ package npu.zunsql.common;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
 
 
 public abstract class FormatObject {
@@ -24,7 +19,8 @@ public abstract class FormatObject {
         return fieldValues;
     }
 
-    @Override public boolean equals(Object obj) {
+    @Override
+    public boolean equals(Object obj) {
         if (this == obj) {
             return true;
         }
@@ -37,11 +33,13 @@ public abstract class FormatObject {
         return valueList().equals(((FormatObject) obj).valueList());
     }
 
-    @Override public int hashCode() {
+    @Override
+    public int hashCode() {
         return valueList().hashCode();
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
         StringBuilder buf = new StringBuilder(getClass().getSimpleName());
         buf.append(" {");
         Field[] fields = getValueFields(getClass());
@@ -57,9 +55,9 @@ public abstract class FormatObject {
     }
 
 
-
     private static final Comparator<Field> NAME_ORDER = new Comparator<Field>() {
-        @Override public int compare(Field field1, Field field2) {
+        @Override
+        public int compare(Field field1, Field field2) {
             return field1.getName().compareTo(field2.getName());
         }
     };
