@@ -1,10 +1,9 @@
 package npu.zunsql.sqlparser.parser;
 
+import npu.zunsql.sqlparser.ast.*;
 import org.jparsec.Parser;
 import org.jparsec.Parsers;
 import org.junit.Test;
-
-import npu.zunsql.sqlparser.ast.*;
 
 import static npu.zunsql.sqlparser.parser.ExpressionParser.NUMBER;
 import static npu.zunsql.sqlparser.parser.ExpressionParser.QUALIFIED_NAME;

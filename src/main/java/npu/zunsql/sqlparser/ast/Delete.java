@@ -8,7 +8,7 @@ public final class Delete extends FormatObject implements Relation {
 
     public Delete(
             TableRelation from, Expression where) {
-        this.from =from;
+        this.from = from;
         this.where = where;
     }
 }

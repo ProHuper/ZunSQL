@@ -1,7 +1,7 @@
 package npu.zunsql.sqlparser.parser;
 
-import org.jparsec.Parser;
 import npu.zunsql.sqlparser.ast.*;
+import org.jparsec.Parser;
 import org.junit.Test;
 
 import java.util.Arrays;
