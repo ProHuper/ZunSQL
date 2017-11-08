@@ -26,9 +26,6 @@ public enum OpCode {
     EndItem,
 
     BeginFilter,
-    And,
-    Or,
-    Not,
     Filter,
     EndFilter,
 
@@ -41,6 +38,26 @@ public enum OpCode {
 
     Update,
     Set,
+
+    BeginExpression,
+    EndExpression,
+
+    GT,
+    GE,
+    LT,
+    LE,
+    EQ,
+    NE,
+    Mul,
+    Div,
+    Neg,
+    Sub,
+    And,
+    Or,
+    Not,
+
+    Operator,
+    Operand,
 
     Execute,
 }

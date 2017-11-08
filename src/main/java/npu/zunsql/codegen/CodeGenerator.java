@@ -57,19 +57,9 @@ public class CodeGenerator {
                         ret.add(new Instruction(OpCode.Insert, null, null, table));
                         ret.add(new Instruction(OpCode.BeginItem, null, null, null));
                         for (int i = 0; i < insert.names.size(); i++) {
-                            String name = ((QualifiedNameExpression)insert.names.get(0)).qname.names.get(0);
-                            String type = null;
-                            String value = insert.expressions.get(0).toString();
-                            if (insert.expressions.get(0) instanceof StringExpression) {
-                                type = "String";
-                            } else if (insert.expressions.get(0) instanceof NumberExpression) {
-                                if (value.contains(".")) {
-                                    type = "Float";
-                                } else {
-                                    type = "Integer";
-                                }
-                            }
-                            ret.add(new Instruction(OpCode.AddItemCol, name, type, value));
+                            String name = ((QualifiedNameExpression)insert.names.get(i)).qname.names.get(0);
+                            ret.add(new Instruction(OpCode.AddItemCol, name, null, null));
+                            ret.addAll(ExpressionToInstruction(insert.expressions.get(i)));
                         }
                         ret.add(new Instruction(OpCode.EndItem, null, null, null));
                         break TYPE_SWITCH;
@@ -113,7 +103,8 @@ public class CodeGenerator {
                         ret.add(new Instruction(OpCode.Update, null, null, table));
                         for (Assignment a: update.updates) {
                             String name = a.name.names.get(0);
-                            ret.add(new Instruction(OpCode.Set, name, null, a.value.toString()));
+                            ret.add(new Instruction(OpCode.Set, name, null, null));
+                            ret.addAll(ExpressionToInstruction(a.value));
                         }
                         Expression where = update.where;
                         ret.addAll(WhereToInstruction(where));
@@ -127,56 +118,109 @@ public class CodeGenerator {
         return ret;
     }
 
-    private static List<Instruction> WhereToInstruction(Expression where) {
+    private static List<Instruction> ExpressionToInstruction(Expression exp) {
         List<Instruction> ret = new ArrayList<>();
-        if (where != null) {
-            ret.add(new Instruction(OpCode.BeginFilter, null, null, null));
-            if (where instanceof BinaryExpression) {
-                BinaryExpression bin = (BinaryExpression)where;
-                ret.addAll(BinaryExpressionToFilter(bin));
-            }
-            ret.add(new Instruction(OpCode.EndFilter, null, null, null));
-            // Do not support other expression now due to lack of OpCode type.
+        if (exp != null) {
+            ret.add(new Instruction(OpCode.BeginExpression, null, null, null));
+            ret.addAll(ExpressionToInstructionsInternal(exp));
+            ret.add(new Instruction(OpCode.EndExpression, null, null, null));
         }
         return ret;
     }
 
-    public static final List<Instruction> BinaryExpressionToFilter(BinaryExpression bin) {
+    private static List<Instruction> WhereToInstruction(Expression where) {
         List<Instruction> ret = new ArrayList<>();
-        switch (bin.operator) {
-            case OR:
-                ret.addAll(BinaryExpressionToFilter((BinaryExpression)(bin.left)));
-                ret.add(new Instruction(OpCode.Or, null, null, null));
-                ret.addAll(BinaryExpressionToFilter((BinaryExpression)(bin.right)));
-                break;
-            case AND:
-                ret.addAll(BinaryExpressionToFilter((BinaryExpression)(bin.left)));
-                ret.add(new Instruction(OpCode.And, null, null, null));
-                ret.addAll(BinaryExpressionToFilter((BinaryExpression)(bin.right)));
-                break;
-            default:
-                ret.add(new Instruction(OpCode.Filter, bin.left.toString(), OpToString(bin.operator), bin.right.toString()));
+        if (where != null) {
+            ret.add(new Instruction(OpCode.BeginFilter, null, null, null));
+            ret.addAll(ExpressionToInstructionsInternal(where));
+            ret.add(new Instruction(OpCode.EndFilter, null, null, null));
         }
         return ret;
+    }
+
+    // public for test
+    public static List<Instruction> ExpressionToInstructionsInternal(Expression expr) {
+        List<Instruction> ret = new ArrayList<>();
+        if (expr instanceof NumberExpression) {
+            ret.add(new Instruction(OpCode.Operand, null, ((NumberExpression) expr).number, null));
+            return ret;
+        }
+        if (expr instanceof StringExpression) {
+            ret.add(new Instruction(OpCode.Operand, null, ((StringExpression) expr).string, null));
+            return ret;
+        }
+        if (expr instanceof QualifiedNameExpression) {
+            ret.add(new Instruction(OpCode.Operand, ((QualifiedNameExpression) expr).qname.names.get(0), null, null));
+            return ret;
+        }
+
+        // reverse poland
+
+        if (expr instanceof UnaryExpression) {
+            ret.addAll(ExpressionToInstructionsInternal(((UnaryExpression) expr).operand));
+            ret.add(OpToInstruction(((UnaryExpression) expr).operator));
+            return ret;
+        }
+
+        if (expr instanceof BinaryExpression) {
+            ret.addAll(ExpressionToInstructionsInternal(((BinaryExpression) expr).left));
+            ret.addAll(ExpressionToInstructionsInternal(((BinaryExpression) expr).right));
+            ret.add(OpToInstruction(((BinaryExpression) expr).operator));
+            return ret;
+        }
+
+        return ret;
+    }
+
+    private static Instruction OpToInstruction(Op op) {
+        return new Instruction(OpCode.Operator, OpToString(op), null, null);
     }
 
     private static String OpToString(Op op) {
         String ret = null;
         switch (op) {
             case GT:
-                ret = ">";
+                ret = "GT";
                 break;
             case LT:
-                ret = "<";
+                ret = "LT";
                 break;
             case GE:
-                ret = ">=";
+                ret = "GE";
                 break;
             case LE:
-                ret = "<=";
+                ret = "LE";
                 break;
             case EQ:
-                ret = "=";
+                ret = "EQ";
+                break;
+            case NE:
+                ret = "NE";
+                break;
+            case MUL:
+                ret = "Mul";
+                break;
+            case DIV:
+                ret = "Div";
+                break;
+            case PLUS:
+                ret = "Add";
+                break;
+            case MINUS:
+                ret = "Sub";
+                break;
+            case NEG:
+                ret = "Neg";
+                break;
+            case NOT:
+                ret = "Not";
+                break;
+            case AND:
+                ret = "And";
+                break;
+            case OR:
+                ret = "Or";
+                break;
         }
         return ret;
     }
