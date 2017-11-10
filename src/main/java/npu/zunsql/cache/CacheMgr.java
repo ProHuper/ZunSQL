@@ -61,68 +61,59 @@ public class CacheMgr
      */
     public boolean commitTransation(int transID) throws IOException {
         Transaction trans = transMgr.get(transID);
-        List<Page> writePageList= transOnPage.get(transID);
-        File journal_file = new File(Integer.toString(transID)+"-journal");
-        File db_file = new File(this.dbName);
-
-        for( int i = 0 ; i < writePageList.size() ; i++)
+        if(trans.WR)
         {
-            Page copyPage = writePageList.get(i);
-            Page tempPage = this.cachePageMap.get(copyPage.pageID);
-            //cache未命中
-            if(tempPage == null)
-            {
-                //cache已满，按照LRU策略替换
-                if (this.cachePageMap.size() >= CacheMgr.CacheCapacity) {
-                    //按照LRU在cache的list和map中删除某一页的记录
-                    tempPage = this.cacheList.get(0);
-                    this.cacheList.remove(0);
-                    this.cachePageMap.remove(tempPage.pageID);
+            List<Page> writePageList= transOnPage.get(transID);
+            File journal_file = new File(Integer.toString(transID)+"-journal");
+            File db_file = new File(this.dbName);
+            ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(journal_file));
 
-                    //修改删除页对象的数据后，新加入cache的list和map中
-                    tempPage.pageID = copyPage.pageID;
-                    tempPage.pageBuffer.put(copyPage.pageBuffer);
-                    this.cacheList.add(tempPage);
-                    this.cachePageMap.put(copyPage.pageID, tempPage);
-                }
-                //cache还有空间
-                else
-                {
-                    //新建页对象，记录在cache的list和map中
-                    tempPage = new Page(copyPage);
-                    this.cacheList.add(tempPage);
-                    this.cachePageMap.put(tempPage.pageID, tempPage);
-                }
-            }
-            //cache命中，修改cache中该页的数据
-            else
-            {
-                for( int j = 0 ; j < cacheList.size() ; j++)
-                {
-                    Page jPage = cacheList.get(i);
-                    if (jPage.pageID == copyPage.pageID)
-                    {
-                        cacheList.remove(i);
+            for( int i = 0 ; i < writePageList.size() ; i++) {
+                Page copyPage = writePageList.get(i);
+                Page tempPage = this.cachePageMap.get(copyPage.pageID);
+                //cache未命中
+                if (tempPage == null) {
+                    //cache已满，按照LRU策略替换
+                    if (this.cachePageMap.size() >= CacheMgr.CacheCapacity) {
+                        //按照LRU在cache的list和map中删除某一页的记录
+                        tempPage = this.cacheList.get(0);
+                        this.cacheList.remove(0);
+                        this.cachePageMap.remove(tempPage.pageID);
+
+                        //从文件中读入该页，新加入cache的list和map中
+                        tempPage = getPageFromFile(copyPage.pageID);
+                    }
+                    //cache还有空间
+                    else {
+                        //从文件中读入该页，新加入cache的list和map中
+                        tempPage = getPageFromFile(copyPage.pageID);
                     }
                 }
+                //cache命中，按照LRU更新cache的list
+                else {
+                    for (int j = 0; j < cacheList.size(); j++) {
+                        Page jPage = cacheList.get(i);
+                        if (jPage.pageID == copyPage.pageID) {
+                            cacheList.remove(i);
+                        }
+                    }
+                }
+
+                //此时tempPage都是文件中的原始数据，写日志文件
+                if (journal_file.exists() && journal_file.isFile()) {
+                    out.writeObject(tempPage);
+                }
+
+                //写cache
                 tempPage.pageID = copyPage.pageID;
                 tempPage.pageBuffer.put(copyPage.pageBuffer);
-                this.cacheList.add(tempPage);
-            }
 
-            //写日志文件
-            if(journal_file.exists()&&journal_file.isFile())
-            {
-                ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(journal_file));
-                out.writeObject(tempPage);
-            }
-            //写直达，将该页同时写至数据库文件中
-            if(db_file.exists()&&db_file.isFile())
-            {
-                this.setPageToFile(tempPage, db_file);
+                //写直达，将该页同时写至数据库文件中
+                if (db_file.exists() && db_file.isFile()) {
+                    this.setPageToFile(tempPage, db_file);
+                }
             }
         }
-
         trans.commit();
         this.transMgr.remove(transID);
         return true;
@@ -132,9 +123,42 @@ public class CacheMgr
      *
      * 释放对应的锁，cache不做任何操作
      */
-    public boolean rollbackTransation(int transID)
-    {
+    public boolean rollbackTransation(int transID) throws IOException {
         Transaction trans = transMgr.get(transID);
+
+        if(trans.WR)
+        {
+            File journal_file = new File(Integer.toString(transID)+"-journal");
+            File db_file = new File(this.dbName);
+            ObjectInputStream in = new ObjectInputStream(new FileInputStream(journal_file));
+            try
+            {
+                while(in.available() > 1)
+                {
+                    Page srcPage = (Page)in.readObject();
+                    Page tempPage = this.cachePageMap.get(srcPage.pageID);
+                    //cache命中, 更改cache文件
+                    if (tempPage != null)
+                    {
+                        tempPage.pageBuffer.put(srcPage.pageBuffer);
+                        //将该页同时写至数据库文件中
+                        if (db_file.exists() && db_file.isFile()) {
+                            this.setPageToFile(tempPage, db_file);
+                        }
+                    }
+                }
+            }
+            catch(Exception e)
+            {
+                e.printStackTrace();
+            }
+            finally
+            {
+                if(in != null)
+                    in.close();
+            }
+        }
+
         trans.rollback();
         this.transMgr.remove(transID);
         return true;

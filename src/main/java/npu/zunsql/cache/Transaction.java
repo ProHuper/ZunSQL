@@ -12,7 +12,7 @@ public class Transaction
     protected static final String SUFFIX_JOURNAL = "-journal";
 
     //标记是读事务还是写事务，WR是true为写，WR是false为读
-    private boolean WR;
+    protected boolean WR;
 
     protected ReadWriteLock lock;
 
