@@ -9,7 +9,7 @@ public class PageTest extends TestCase {
         super.setUp();
         ByteBuffer buffer = ByteBuffer.allocate(Page.PAGE_SIZE);
         buffer.putInt(111);
-        page = new Page(2, buffer);
+        page = new Page(1, buffer);
     }
 
     public void tearDown() throws Exception {
@@ -23,7 +23,7 @@ public class PageTest extends TestCase {
     public void testGetPageBuffer() throws Exception {
         ByteBuffer tmp = page.getPageBuffer();
         tmp.flip();
-        assertEquals(1111, tmp.getInt());
+        assertEquals(111, tmp.getInt());
     }
 
 }
