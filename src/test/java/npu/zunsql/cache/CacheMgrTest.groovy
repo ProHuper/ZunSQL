@@ -1,11 +1,15 @@
 class CacheMgrTest extends groovy.util.GroovyTestCase {
+    void setUp() {
+        super.setUp()
+    }
+
+    void tearDown() {
+    }
+
     void testBeginTransation() {
     }
 
     void testCommitTransation() {
-    }
-
-    void testRollbackTransation() {
     }
 
     void testReadPage() {
