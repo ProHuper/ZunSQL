@@ -1,20 +1,29 @@
-import static org.junit.Assert.*;
+package npu.zunsql.cache;
+import junit.framework.TestCase;
 
-public class PageTest {
-    @org.junit.Before
+import java.nio.ByteBuffer;
+
+public class PageTest extends TestCase {
+    private static Page page;
     public void setUp() throws Exception {
+        super.setUp();
+        ByteBuffer buffer = ByteBuffer.allocate(Page.PAGE_SIZE);
+        buffer.putInt(111);
+        page = new Page(2, buffer);
     }
 
-    @org.junit.After
     public void tearDown() throws Exception {
+
     }
 
-    @org.junit.Test
-    public void getPageID() throws Exception {
+    public void testGetPageID() throws Exception {
+        assertEquals(1,page.getPageID());
     }
 
-    @org.junit.Test
-    public void getPageBuffer() throws Exception {
+    public void testGetPageBuffer() throws Exception {
+        ByteBuffer tmp = page.getPageBuffer();
+        tmp.flip();
+        assertEquals(1111, tmp.getInt());
     }
 
 }

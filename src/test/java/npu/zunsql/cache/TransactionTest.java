@@ -1,16 +1,24 @@
-import static org.junit.Assert.*;
+import junit.framework.TestCase;
 
-public class TransactionTest {
-    @org.junit.Test
-    public void begin() throws Exception {
+import java.util.concurrent.locks.ReadWriteLock;
+
+public class TransactionTest extends TestCase {
+    private ReadWriteLock read_lock =
+    private Transaction trans = new Transaction("w",)
+    public void setUp() throws Exception {
+        super.setUp();
     }
 
-    @org.junit.Test
-    public void commit() throws Exception {
+    public void tearDown() throws Exception {
     }
 
-    @org.junit.Test
-    public void rollback() throws Exception {
+    public void testBegin() throws Exception {
+    }
+
+    public void testCommit() throws Exception {
+    }
+
+    public void testRollback() throws Exception {
     }
 
 }
