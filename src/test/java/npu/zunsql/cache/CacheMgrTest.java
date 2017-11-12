@@ -6,9 +6,13 @@ public class CacheMgrTest extends TestCase {
     }
 
     public void tearDown() throws Exception {
+
     }
 
+
     public void testBeginTransation() throws Exception {
+
+
     }
 
     public void testCommitTransation() throws Exception {
