@@ -1,7 +1,5 @@
 package npu.zunsql.tree;
 
-import javafx.scene.control.Tab;
-
 import java.util.List;
 
 /**
@@ -9,44 +7,62 @@ import java.util.List;
  */
 public class Database
 {
-
+    //表示dataBase的名字
     private String dataBaseName;
+    //数据库中表的list的集合
     private List<Table> tableList;
 
-    public Database(String DBName)
+    //初始化数据库的名称
+    public Database(String name)
     {
-        dataBaseName = DBName;
+        dataBaseName = name;
     }
 
-    public Transaction beginTrans(int transType)
+
+    public boolean drop()
     {
-        Transaction transaction = new Transaction(1);
-        return transaction; //0
+        return true;
     }
 
-    public Table createTable(String tableName, List<Column> columnList)
+    //开始一个读事务操作
+    public Transaction beginReadTrans()
     {
-        Table table = new Table(tableName,columnList.get(0), columnList);
+        ReadTran readTran = new ReadTran(1);
+        return readTran; //0
+    }
+
+    //开始一个写事务
+    public Transaction beginWriteTrans()
+    {
+        WriteTran WriteTran = new WriteTran(1);
+        return WriteTran; //0
+    }
+
+    //根据传来的表名，主键以及其他的列名来新建一个表放入tableList中
+    public Table createTable(String tableName, Column key, List<Column> otherColumnList, Transaction trans)
+    {
+        Table table = new Table(tableName, key, otherColumnList);
         tableList.add(table);
         return table;   //NULL
     }
 
+    //根据传来的表名返回Table表对象
     public Table getTable(String tableName)
     {
-        int i;
-        for(i = 0;i < tableList.size();i++)
+        for(int i = 0; i < tableList.size(); i++)
         {
-            if(tableName == tableList.get(i).getTableName())
+            if(tableList.get(i).getTableName().contentEquals(tableName))
             {
-                break;
+                return tableList.get(i);
             }
         }
-        return tableList.get(i);
+        return null;
     }
 
+    //给整个数据库中的表全部加锁
     public boolean lock()
     {
-        if(tableList.get(0).getLock() == 1)
+        if(tableList.get(0).isLocked())
         {
             return false;
         }
@@ -54,19 +70,20 @@ public class Database
         {
             for (int i = 0; i < tableList.size(); i++)
             {
-                tableList.get(i).setLock(1);    //给它上锁
+                tableList.get(i).lock();    //给它上锁
             }
             return true;
         }
     }
 
+    //给数据库中全部的表解锁
     public boolean unLock()
     {
-        if(tableList.get(0).getLock() == 1)
+        if(tableList.get(0).isLocked())
         {
             for (int i = 0; i < tableList.size(); i++)
             {
-                tableList.get(i).setLock(2); //给它解锁
+                tableList.get(i).unLock(); //给它解锁
             }
             return true;
         }

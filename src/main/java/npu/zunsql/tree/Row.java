@@ -11,19 +11,47 @@ public class Row
     private List<Cell> otherCellList;
     // 每个Row中包含一个主键
     private Cell keyCell;
-    // 除了叶子节点的其他节点都拥有他的子节点
-    private List<Row> sonRow;
-    // 除了根节点的其他节点都拥有他的父亲节点
-    private Row fatherRow;
+
     // 除了最小节点外，其他节点都拥有他的左节点
     private Row leftBrotherRow;
     // 除了最大节点外，其他节点都拥有他的右节点
     private Row rightBrotherRow;
 
+    public boolean nullOrNot;
+
     public Row(Cell key,List<Cell> others)
     {
         keyCell = key;
         otherCellList = others;
+    }
+
+    public Row()
+    {
+        nullOrNot = true;
+        keyCell = null;
+        otherCellList = null;
+    }
+
+    public boolean setLeftRow(Row row)
+    {
+        leftBrotherRow = row;
+        return true;
+    }
+
+    public Row getLeftRow()
+    {
+        return leftBrotherRow;
+    }
+
+    public boolean setRightRow(Row row)
+    {
+        rightBrotherRow = row;
+        return true;
+    }
+
+    public Row getRightRow()
+    {
+        return rightBrotherRow;
     }
 
     // 改变row中的某一列，直接传入该单元，函数会根据本单元信息匹配对应列进行修改。
@@ -35,7 +63,7 @@ public class Row
         boolean changeOrNot = false;
 
         // 若为主键
-        if(thisCell.getColumn().IsEqual(keyCell.getColumn()))
+        if(thisCell.getColumn().isMatch(keyCell.getColumn()))
         {
             keyCell = thisCell;
             changeOrNot = true;
@@ -45,7 +73,7 @@ public class Row
             // 对其他列进行遍历
             for(int i = 0; i < otherCellList.size(); i++)
             {
-                if(thisCell.getColumn().IsEqual(otherCellList.get(i).getColumn()))
+                if(thisCell.getColumn().isMatch(otherCellList.get(i).getColumn()))
                 {
                     otherCellList.set(i,thisCell);
                     changeOrNot = true;
@@ -61,7 +89,7 @@ public class Row
     public Cell getCell(Column column)
     {
         // 若为主键
-        if(column.IsEqual(keyCell.getColumn()))
+        if(column.isMatch(keyCell.getColumn()))
         {
             return keyCell;
         }
@@ -70,12 +98,44 @@ public class Row
             // 对其他列进行遍历
             for(int i = 0; i < otherCellList.size(); i++)
             {
-                if(column.IsEqual(otherCellList.get(i).getColumn()))
+                if(column.isMatch(otherCellList.get(i).getColumn()))
                 {
                     return otherCellList.get(i);
                 }
             }
         }
         return null;
+    }
+
+    public Cell getKeyCell()
+    {
+        return keyCell;
+    }
+
+    public boolean isMatch(Column key,List<Column> others)
+    {
+        if (key.isMatch(keyCell.getColumn()) && others.size() == otherCellList.size())
+        {
+            for (int i = 0; i < others.size(); i++)
+            {
+                boolean eqOrNot = false;
+                for (int j = 0; j < otherCellList.size(); j++)
+                {
+                    if (otherCellList.get(j).getColumn().isMatch(others.get(i)))
+                    {
+                        eqOrNot = true;
+                    }
+                }
+                if (!eqOrNot)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 }

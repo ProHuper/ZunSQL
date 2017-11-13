@@ -10,58 +10,72 @@ import java.util.List;
  */
 public class Table
 {
-
-    public final static int TT_READ = 1;
-    public final static int TT_WRITE = 2;
-
-    public final static int LO_LockED = 1;
+    public final static int LO_LOCKED = 1;
     public final static int LO_SHARED = 2;
-
     private Integer lock;
     private String tableName;
-    private Column key;
+    private Column keyColumn;
     private List<Column> otherColumn;
-    private Row rootRow;
+    private Node rootNode;
 
-    public Table(String TName,Column keyColumn,List<Column> otherColumnPass)
+    public Table(String name,Column key,List<Column> others)
     {
-        tableName = TName;
-        key = keyColumn;
-        otherColumn = otherColumnPass;
+        tableName = name;
+        keyColumn = key;
+        otherColumn = others;
+        lock = LO_SHARED;
+        rootNode = new Node();
     }
 
-    public boolean drop()       //rootRow清空
-    {
-        lock = null;
-        tableName = null;
-        key = null;
-        otherColumn.clear();
-        rootRow= null;
-        return true;
-    }
-
-    public boolean clear()      //rootRow不清空
+    public boolean drop()
     {
         lock = null;
         tableName = null;
-        key = null;
+        keyColumn = null;
         otherColumn.clear();
+        rootNode = new Node();
         return true;
     }
+
+    public boolean clear()
+    {
+        rootNode = new Node();
+        return true;
+    }
+
 
     public String getTableName()
     {
         return tableName;   //NULL
     }
 
-    public Integer getLock()
+    public boolean isLocked()
     {
-        return lock;   //NULL
+        if (lock == LO_LOCKED)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 
-    public void setLock(Integer lockpass)
+    protected Node getRootNode()
     {
-        lock = lockpass;   //NULL
+        return rootNode;
+    }
+
+    public boolean lock()
+    {
+        lock = LO_LOCKED;   //NULL
+        return true;
+    }
+
+    public boolean unLock()
+    {
+        lock = LO_SHARED;   //NULL
+        return true;
     }
 
     public Cursor createCursor()
@@ -71,7 +85,7 @@ public class Table
     }
     public Column getKeyColumn()
     {
-        return key;
+        return keyColumn;
     }
     public List<Column> getOtherColumn()
     {
