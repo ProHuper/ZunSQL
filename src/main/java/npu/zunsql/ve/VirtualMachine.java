@@ -1,22 +1,19 @@
 package npu.zunsql.ve;
 
-import npu.zunsql.tree.Cursor;
-import npu.zunsql.tree.Database;
-import npu.zunsql.tree.Table;
+import npu.zunsql.tree.*;
 
-import java.util.List;
-import java.util.Map;
+import java.lang.reflect.Array;
+import java.util.*;
 
 public class VirtualMachine
 {
 	Map<String,QueryResult> tables;
-
 	List<ByteCode> filters;
 	List<String> selectedColumns;
 	List<AttrInstance> record;
 	List<Column> columns;
 	List<ByteCode> instuctions;
-	QueryResult result;
+
 
     String targetTable;
     String pkName;
@@ -24,6 +21,7 @@ public class VirtualMachine
     String updateValue;
     String tableName;
     Activity activity;
+    QueryResult result;
     QueryResult joinResult;
 
 	boolean filtersReadOnly;
@@ -33,19 +31,19 @@ public class VirtualMachine
 
     Database db;
 
-	public VirtualMachine()
+	public QueryResult VirtualMachine()
 	{
 		filtersReadOnly=true;
 		recordReadOnly=true;
 		columnsReadOnly=true;
 		selectedColumnsReadOnly=true;
-
-        result=null;
+		result=null;
 		activity=null;
 		targetTable=null;
 
         //todo：这里需要约定数据库文件的名称，暂时定为db
         db=new Database("db");
+        return result;
 	}
 
 	public QueryResult runAll(List<ByteCode> instuctions)
@@ -66,20 +64,9 @@ public class VirtualMachine
 
         switch(opCode)
         {
-            case Integer:
-                //暂未启用的指令
-                break;
-
-            case Float:
-                //暂未启用的指令
-                break;
-
-            case String:
-                //暂未启用的指令
-                break;
 
             case Transaction:
-                //todo：调用下层方法
+
                 break;
 
             case Commit:
@@ -270,23 +257,114 @@ public class VirtualMachine
 
     private void join(String tableName)
     {
-        Table table=db.GetTable(tableName);
-        Cursor p=new Cursor(table);
+        Table table = db.getTable(tableName);
+        List<List<String>> resList = joinResult.getRes();
+        List<Column> resHead = joinResult.getHeader();
+        //TODO,两张表的公共属性。
+        List<Column> fromTreeHead = new ArrayList<>();
+        table.getColumns().forEach(n -> fromTreeHead.add(new Column(n.getColumnName())));
 
+        Cursor cursor = new Cursor(table);
+        JoinMatch matchedJoin = checkUnion(resHead, fromTreeHead);
+        QueryResult copy = new QueryResult(matchedJoin.getJoinHead());
 
-        //todo:需要下层提供可以访问表头的方法用以构造QueryResult的表头
-        //todo:构造用于存放本次结果的临时表
-        //QueryResult iterObj=
-
-        //填充数据
-        int count=joinResult.getRes().size()/joinResult.getHeader().size();
-        for(int i=0;i<count;i++)
-        {
-            while(p!=null)
+        for(int i = 0; i < resList.size(); i++){
+            List<String> tempRes = resList.get(i);
+            while(cursor != null)
             {
-                //todo:判断p所指向的条目是否与joinResult中第i项满足构成自然连接的条件
+                Row row = cursor.GetData();
+                List<Cell> fromTreeCell = row.getCellList();
+                //TODO 转换。
+                List<String> fromTreeString = new ArrayList<>();
+                List<String> copyTreeString = new ArrayList<>();
+                fromTreeString.forEach(n -> copyTreeString.add(n));
+
+                Iterator iterator = matchedJoin.getJoinUnder().keySet().iterator();
+                while(iterator.hasNext()){
+                    int nextKey = (Integer) iterator.next();
+                    int nextValue = matchedJoin.getJoinUnder().get(nextKey);
+                    String s1 = tempRes.get(nextKey);
+                    String s2 = fromTreeString.get(nextValue);
+                    if( !s1.equals(s2) ){
+                        break;
+                    }
+                    else{
+                        copyTreeString.remove(nextValue);
+                    }
+                }
+
+                if(iterator.hasNext()){
+                    List<String> line = new ArrayList<>();
+                    tempRes.forEach(n -> line.add(n));
+                    copyTreeString.forEach(n -> line.add(n));
+                    copy.getRes().add(line);
+                }
+
+                cursor.MovetoNext();
             }
         }
-        
+        joinResult = copy;
+    }
+
+    public JoinMatch checkUnion(List<Column> head1, List<Column> head2){
+	    List<Column> unionHead = new ArrayList<>();
+        Map<Integer,Integer> unionUnder = new HashMap<>();
+
+        head1.forEach(n -> unionHead.add(n));
+
+        for(Column n : head2){
+            if(!head1.contains(n)){
+                unionHead.add(n);
+            }
+        }
+
+	    for(int i = 0; i < head1.size(); i++){
+	        int locate = head2.indexOf(head1.get(i));
+	        if(locate != -1){
+	            unionUnder.put(i,locate);
+            }
+        }
+
+	    return new JoinMatch(unionHead, unionUnder);
+    }
+
+
+    //这个方法只用于测试自然连接操作。
+    public QueryResult forTestJoin(JoinMatch joinMatch, QueryResult input1, QueryResult input2){
+        int matchCount = 0;
+        QueryResult copy = new QueryResult(joinMatch.getJoinHead());
+        List<List<String>> resList = input1.getRes();
+        for(int i = 0; i < resList.size(); i++){
+            List<String> tempRes = resList.get(i);
+            for(List<String> fromTreeString: input2.getRes())
+            {
+                List<String> copyTreeString = new ArrayList<>();
+                fromTreeString.forEach(n -> copyTreeString.add(n));
+                Iterator iterator = joinMatch.getJoinUnder().keySet().iterator();
+                matchCount = 0;
+
+                while(iterator.hasNext()){
+                    int nextKey = (Integer) iterator.next();
+                    int nextValue = joinMatch.getJoinUnder().get(nextKey);
+                    String s1 = tempRes.get(nextKey);
+                    String s2 = fromTreeString.get(nextValue);
+                    if( !s1.equals(s2) ){
+                        break;
+                    }
+                    else{
+                        matchCount++;
+                        copyTreeString.remove(nextValue);
+                    }
+                }
+
+                if(matchCount == joinMatch.getJoinUnder().size()){
+                    List<String> line = new ArrayList<>();
+                    tempRes.forEach(n -> line.add(n));
+                    copyTreeString.forEach(n -> line.add(n));
+                    copy.getRes().add(line);
+                }
+            }
+        }
+        return copy;
     }
 }

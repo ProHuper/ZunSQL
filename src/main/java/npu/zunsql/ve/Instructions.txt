@@ -18,9 +18,9 @@ Integer              	                                int_value
 String               	                                string_value
 Float													float_value
 
-Transaction                                               
-Commit                                                    
-Rollback                                                  
+Transaction
+Commit
+Rollback
 
 CreateDB                                                db_name
 DropDB                                                  db_name
@@ -33,32 +33,32 @@ Delete                                                  table_name
 Select                                                  table_name
 Update                                                  table_name
 
-AddCol                  col_name      col_type        
+AddCol                  col_name      col_type
 
 BeginPK
-AddPK                   col_name        
+AddPK                   col_name
 EndPK
 
-BeginItem                                                 
+BeginItem
 AddItemCol              col_name      col_type      value
-EndItem                                                   
+EndItem
 
-BeginFilter                                                 
-Filter                  col_name     comp_type     comp_value
-EndFilter                                                 
+BeginFilter
+Operand 				col_name	  constant
+Operator				op
+EndFilter
 
-BeginColSelect                                            
-AddColSelect            col_name                        
-EndColSelect                                              
+BeginColSelect
+AddColSelect            col_name
+EndColSelect
 
 Set                     col_name                      value
 
-And                                                       
-Or 
-Not
-
-Execute                                                   
+Execute
 ——————————————————————————————————————————————————————————————————————————
+
+op 支持的字符串：GT、GE、LT、LE、EQ、NE、Mul、Div、Add、Sub、Not、And、Or
+
 
 示例（参数位置请参照指令表，空参数连带其位置会被省略）
 

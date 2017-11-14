@@ -8,7 +8,7 @@ import java.util.List;
 public class Row
 {
     // 每个Row中包含一个其他列
-    private List<Cell> otherCellList;
+    private List<Cell> cellList;
     // 每个Row中包含一个主键
     private Cell keyCell;
 
@@ -22,14 +22,14 @@ public class Row
     public Row(Cell key,List<Cell> others)
     {
         keyCell = key;
-        otherCellList = others;
+        cellList = others;
     }
 
     public Row()
     {
         nullOrNot = true;
         keyCell = null;
-        otherCellList = null;
+        cellList = null;
     }
 
     public boolean setLeftRow(Row row)
@@ -71,11 +71,11 @@ public class Row
         else
         {
             // 对其他列进行遍历
-            for(int i = 0; i < otherCellList.size(); i++)
+            for(int i = 0; i < cellList.size(); i++)
             {
-                if(thisCell.getColumn().isMatch(otherCellList.get(i).getColumn()))
+                if(thisCell.getColumn().isMatch(cellList.get(i).getColumn()))
                 {
-                    otherCellList.set(i,thisCell);
+                    cellList.set(i,thisCell);
                     changeOrNot = true;
                 }
             }
@@ -96,15 +96,19 @@ public class Row
         else
         {
             // 对其他列进行遍历
-            for(int i = 0; i < otherCellList.size(); i++)
+            for(int i = 0; i < cellList.size(); i++)
             {
-                if(column.isMatch(otherCellList.get(i).getColumn()))
+                if(column.isMatch(cellList.get(i).getColumn()))
                 {
-                    return otherCellList.get(i);
+                    return cellList.get(i);
                 }
             }
         }
         return null;
+    }
+
+    public List<Cell> getCellList(){
+        return cellList;
     }
 
     public Cell getKeyCell()
@@ -114,14 +118,14 @@ public class Row
 
     public boolean isMatch(Column key,List<Column> others)
     {
-        if (key.isMatch(keyCell.getColumn()) && others.size() == otherCellList.size())
+        if (key.isMatch(keyCell.getColumn()) && others.size() == cellList.size())
         {
             for (int i = 0; i < others.size(); i++)
             {
                 boolean eqOrNot = false;
-                for (int j = 0; j < otherCellList.size(); j++)
+                for (int j = 0; j < cellList.size(); j++)
                 {
-                    if (otherCellList.get(j).getColumn().isMatch(others.get(i)))
+                    if (cellList.get(j).getColumn().isMatch(others.get(i)))
                     {
                         eqOrNot = true;
                     }

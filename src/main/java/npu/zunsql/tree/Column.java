@@ -27,6 +27,10 @@ public class Column
     // column中包含一个columnName。
     private String columnName;
 
+    public String getColumnName() {
+        return columnName;
+    }
+
     public Column(Integer type, String name)
     {
         columnType = type;

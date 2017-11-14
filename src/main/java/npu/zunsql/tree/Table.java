@@ -87,7 +87,7 @@ public class Table
     {
         return keyColumn;
     }
-    public List<Column> getOtherColumn()
+    public List<Column> getColumns()
     {
         return otherColumn;
     }
