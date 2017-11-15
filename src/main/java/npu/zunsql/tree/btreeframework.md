@@ -26,7 +26,7 @@
     
 ## public：
 ### Database(String DBName);
-	本类的构造函数，
+	初始化数据库的名称
 
 ### Transaction BeginTrans(int TransType);
 	开始一个事务,TransType表示事务类型
@@ -80,22 +80,29 @@
 ## private:
 ### String TableName;
 	表名
-### Column Key;
+### Column keyColumn;
 	主键
-### List`<Column>` OtherColumn;
-	其他列
-### int Lock;
-	本变量为锁标记，主要用于标记排他写。
+### List`<Column>` columns;
+	所有列
+### final static int LO_LOCKED = 1;	
 	写锁：LO_LOCKED
+### final static int LO_SHARED = 2;	
 	读锁：LO_SHARED
-### Cell RootRow;
+### private Integer lock;
+	本变量为锁标记，主要用于标记排他写。
+### Node rootNode;
+    根结点。
+
+## protected
+### Node getRootNode();
+    得到根结点。
 
 ## public:
-### table(String TName,Column KeyColumn,List`<Column>` OtherColumn);（不考虑主键取多列的情况）
+### Table(String name,Column key,List`<Column>` colist)；
 	本函数为table类的构造函数
 	TName为TableName,KeyColumn为Key,OtherColumn为其他列
 
-### bool Drop();
+### boolean Drop();
 	删除一张表
 	成功返回true，失败返回false。
 
@@ -106,10 +113,22 @@
 ### String GetTableName();
 	得到表名
 	成功返回TableName， 失败返回空。
-
+	
+### boolean isLocked();
+	返回是否被锁。
+### boolean getLock()；
+    返回是否被锁。
+### boolean lock()；
+    上锁。
+### boolean unLock()；
+    解锁
 ### Cursor CreateCursor(String TableName);
 	添加一个光标
 	成功返回cursor，失败返回空。
+### Column getKeyColumn()；
+    得到主键。
+### Column getColumn(String columnName)；
+    得到指定列。
 
 
 
@@ -212,14 +231,11 @@
 ### Table aimTable;
 	表示目标表，在构造函数中赋值。
 ### Row thisRow;
+    游标指向的行。
 
 ## public：
 ### Cursor(Table thisTable)
-	本函数为cursor类的构造函数
-
-### bool ClearCursor()	（感觉没啥必要）
-	本函数将Cursor置为空
-	成功返回true，失败返回false。
+	本函数为cursor类的构造函数.
 
 ### bool MovetoFirst()
 	本函数将Cursor指向Btree的第一个元素。
@@ -241,31 +257,31 @@
 	本函数用于将Cursor定位到指定key的位置，如果匹配不到，则将Cursor停在与key值相近的某位置
 	成功返回true，失败返回false。
 
-### bool Delete();
+### boolean Delete(Transaction thistran);
 	删除节点
 	成功返回true，失败返回false。
 
-### bool Insert(Row thisRow);
+### boolean Insert(Transaction thistran,Row row)；
 	插入节点
 	成功返回true，失败返回false。
 
-### int GetKeySize();
+### Integer GetKeySize(Transaction thistran)；
 	获取KeySize
 	成功返回true，失败返回false。
 
-### Cell GetKey();
+### Cell GetKey(Transaction thistran)；
 	获取Key值
 	成功返回true，失败返回false。
 
-### int GetDataSize();
+### Integer GetDataSize(Transaction thistran)；
 	获取数据大小
 	成功返回true，失败返回false。
 
-### Row GetData();
+### Row GetData(Transaction thistran);
 	获取数据
 	成功返回data，失败返回空。
 
-### bool setData(Row thisRow);
+### boolean setData(Transaction thistran,Row row)；
 	修改数据
 	成功返回true，失败返回false。
 	
@@ -308,3 +324,7 @@
 ## protected
 ### Node();
     不对外开放的node的简单构造.
+
+## public
+### final static int M = 3;
+    b树的阶数
