@@ -15,13 +15,26 @@ public class Table
     private List<Column> columns;
     private Node rootNode;
 
-    public Table(String name,Column key,List<Column> others)
+    // 已经新建好了一个page，只需要填写相关table信息
+    public Table(String name,Column key,List<Column> coList,int pageID)
     {
         tableName = name;
         keyColumn = key;
-        columns = others;
+        columns = coList;
         lock = LO_SHARED;
         rootNode = new Node();
+    }
+
+    // 已有page，只需要加载其中的信息。
+    public Table(String name,int pageID)
+    {
+
+    }
+
+    // 需要自己新建Page，并填写相关table信息
+    public Table(String name,Column key,List<Column> coList)
+    {
+
     }
 
     public boolean drop()

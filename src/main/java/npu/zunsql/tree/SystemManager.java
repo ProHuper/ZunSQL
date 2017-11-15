@@ -25,7 +25,7 @@ public class SystemManager
         columnList.add(keyColumn);
         columnList.add(valueColumn);
         Transaction masterTran = masterDB.beginWriteTrans();
-        Table masterTable = masterDB.createTable("master",keyColumn,columnList,masterTran);
+        Table masterTable = masterDB.createTable("DBmaster",keyColumn,columnList,masterTran);
         if(masterTable != null)
         {
             masterTran.Commit();
@@ -38,25 +38,37 @@ public class SystemManager
 
     public Database loadDatabase(String dBName)
     {
-        Table master = masterDB.getTable("master");
+        // 读操作
+        Transaction loadTran = masterDB.beginReadTrans();
+        Table master = masterDB.getTable(loadTran,"master");
         Cursor masterCursor = master.createCursor();
         Column valueColumn = master.getColumn("pageNumber");
-        Transaction loadTran = masterDB.beginReadTrans();
         int dBPageID = masterCursor.GetData(loadTran).getCell(valueColumn).getValue_Int();
         if (dBPageID >= 0)
         {
-            loadTran.Commit()
+            loadTran.Commit();
         }
         else
         {
             loadTran.RollBack();
         }
-        return new Database(dBPageID);
+        return new Database(dBName,dBPageID);
     }
 
     public Database addDatabase(String dBName)
     {
-        Table master = masterDB.getTable("master");
+        // 读操作
+        Transaction readTran = masterDB.beginReadTrans();
+        Table master = masterDB.getTable(readTran,"master");
+        if (master != null)
+        {
+            readTran.Commit();
+        }
+        else
+        {
+            readTran.RollBack();
+        }
+
         Cursor masterCursor = master.createCursor();
         Column keyColumn = master.getKeyColumn();
         Column valueColumn = master.getColumn("pageNumber");
@@ -70,16 +82,19 @@ public class SystemManager
         cList.add(valueCell);
         Row thisRow = new Row(keyCell,cList);
 
-        // 操作
+        // 写操作
         Transaction addTran = masterDB.beginWriteTrans();
         if (masterCursor.Insert(addTran,thisRow))
         {
-            addTran.Commit()
+            addTran.Commit();
         }
         else
         {
             addTran.RollBack();
+
+            // TODO：并且释放原本申请的Page空间。
+
         }
-        return new Database(dBName);
+        return new Database(dBName,newDBPage);
     }
 }
