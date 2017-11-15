@@ -1,5 +1,7 @@
 package npu.zunsql.tree;
 
+import npu.zunsql.cache.Page;
+
 import java.util.ArrayList;
 import java.util.List;
 /**
@@ -31,6 +33,11 @@ public class Node {
         sonList = new ArrayList<Node>();
         father = null;
         order = -1;
+    }
+
+    protected Node(Page thisPage)
+    {
+
     }
 
     // 根据Node的属性构造Node。
