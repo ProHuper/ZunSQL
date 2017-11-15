@@ -106,7 +106,7 @@
 	删除一张表
 	成功返回true，失败返回false。
 
-### bool Clear();
+### boolean Clear();
 	清空一张表
 	成功返回true，失败返回false。
 
@@ -127,6 +127,8 @@
 	成功返回cursor，失败返回空。
 ### Column getKeyColumn()；
     得到主键。
+### List`<Column>`getColumns;
+    得到所有列。
 ### Column getColumn(String columnName)；
     得到指定列。
 

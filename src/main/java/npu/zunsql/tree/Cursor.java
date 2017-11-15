@@ -67,7 +67,22 @@ public class Cursor
 
     public Integer GetKeySize(Transaction thistran)
     {
-        return 1;
+       if(thisRow.getKeyCell().getType().equals("Integer"))
+       {
+           return 4;
+       }
+       else if(thisRow.getKeyCell().getType().equals("Float"))
+       {
+           return 8;
+       }
+       else if(thisRow.getKeyCell().getType().equals("String"))
+       {
+           return thisRow.getKeyCell().getValue_String().length());
+       }
+       else
+       {
+           return -1;
+       }
     }
 
     public Row GetData(Transaction thistran)
@@ -83,6 +98,10 @@ public class Cursor
     public boolean setData(Transaction thistran,Row row)
     {
         thisRow = row;
+        Cursor deleteRow = new Cursor(aimTable);
+        deleteRow.MovetoUnpacked(aimTable.getRootNode().getSpecifyRow(row.getKeyCell()));
+        deleteRow.Delete(thistran);
+        this.Insert(thistran,row);
         return true;
     }
 }
