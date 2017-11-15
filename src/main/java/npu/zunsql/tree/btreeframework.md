@@ -17,6 +17,13 @@
 ### List`<Table>` TableList;
 	表的列表
 
+### private Page pageOne;
+    Mgr页放在第一页,内容包括：database的对应页
+   
+### private CacheMgr cacheManager;
+    page层的Mgr，用于对Page层进行操作。
+    
+    
 ## public：
 ### Database(String DBName);
 	本类的构造函数，
@@ -109,60 +116,105 @@
 # class Row
 ## private:
 ### List`<Cell>` Celllist;
-### List`<Row>` SonRow;
-### Row FatherRow;
+    一条记录，数据库中的一行数据。
+### Cell keyCell;
+    主键。
 ### Row LeftBrotherRow;
+    除了最小节点外，其他节点都拥有他的左节点
 ### Row RightBrotherRow;
+    除了最大节点外，其他节点都拥有他的右节点
 
 ## public:
 ### Row(List`<Cell>` Celllist);
 	Row类的构造函数
+### boolean setLeftRow(Row row);
+    设置左结点。
+### Row getLeftRow();
+    得到左结点。
+### boolean setRightRow(Row row);
+    设置右结点。
+### Row getRightRow();
+    得到右结点。
 ### bool ChangeCell(Cell ThisCell);
-	改变某单元的值
-  成功返回true，失败返回false。
+	改变某单元的值。
+    成功返回true，失败返回false。
 ### Cell getCell(Column ThisColumn);
-	根据列信息找到单元格
+	根据列信息找到单元格。
+### List<Cell> getCellList();
+    得到所有单元格。
+### Cell getKeyCell();
+    得到主键。
+### boolean isMatch(Column key,List<Column> others);
+    判断两行是否相等。
+
 
 
 # class Cell
 ## Private:
 ### Column ThisColumn;
 	用于表征Cell所属的列。
-### int value;
+### Integer value;
 	若为整形，则使用value进行存取
-### double dvalue;
-	若为整形，则使用dvalue进行存储
-### String Svalue;
+### Double dValue;
+	若为浮点型形，则使用dvalue进行存储
+### String SValue;
 	若为字符串，则使用Svalue进行存取
+	
 ## Public:
 ### Cell(Column ThisColumn,int ThisValue);
+    Integer类型的构造函数。
 ### Cell(Column ThisColumn,double ThisValue);
+    double类型的构造函数。
 ### Cell(Column ThisColumn,String Thisvalue);
+    string类型的构造函数。
 ### Column getColumn();
+    返回该Cell对应的Column。
 ### int getvalue_int();
+    返回对应的Integer的值。
 ### double getvalue_double();
-`### String getvalue_String();
-
+    返回对应的double的值。
+### String getvalue_String();
+    返回对应的string的值。
+### public boolean equalTo(Cell cell);
+    两个Cell是否相等。
+### public boolean bigerThan(Cell cell);
+    两个Cell的大小比较。
+### public String getType();
+    返回Cell对应列的类型。
 
 
 # class Column
 ## private:
-### int ColumnType;
+### Integer columnType;
+    列的类型，1为Integer,2为Float,3为string;
 ### String ColumnName;
-
+    列的名字。
+    
 ## public:
 ### Column(int Type,String ColumnName)
-
+    构造函数。
+### boolean isMatch(Column column);
+    判断两列是否为同一列。
+### boolean isEqual(Cell a,Cell b);
+    判断两个cell是否相等。
+### boolean isBigger(Cell a,Cell b);
+    比较两个cell的大小。
+### String getType();
+    返回Column的类型。
+### String getName();
+    返回Column的名字，即列名。
+### String getColumnName()；
+    返回Column的名字，即列名。
 
 
 # class Cursor
 ## private:
-### Table aimtable;
+### Table aimTable;
 	表示目标表，在构造函数中赋值。
 ### Row thisRow;
 
 ## public：
-### Cursor(Table thistable)
+### Cursor(Table thisTable)
 	本函数为cursor类的构造函数
 
 ### bool ClearCursor()	（感觉没啥必要）
@@ -216,4 +268,43 @@
 ### bool setData(Row thisRow);
 	修改数据
 	成功返回true，失败返回false。
+	
+# class Node
+## private
+### List<Row> rowList;
+    每个节点包含不少于M/2，不超过M的Row。
+### List<Node> sonList;
+    每个节点包含不少于M/2+1，不超过M+1的SonNode。
+### Node father;
+    表示父亲节点.
+### int order;
+    表示本节点在父亲节点儿子中的第几位。
+### Node(List<Row> thisRowList, List<Node> thisSonList, int thisOrder);
+    根据Node的属性构造Node。
+### Node devideNode()；
+    分裂除根节点外的其他节点。
+### boolean rootDevideNode()；
+    分裂根节点。
+### boolean adjustNode(int sonOrder)；
+    调整本节点使其顺序为sonOrder的儿子row数量恢复至M/2。
+### boolean addNode(Row row, Node node)；
+    在本节点中添加子节点，分别添加row和对应的SonNode。
+### boolean deleteNode(int sonOrder)；
+    删除指定子结点。
+### boolean insertRow(Row row)；
+    插入一条记录（Row）。
+### boolean deleteRow(Cell key);
+    删除一条记录。
+### Row getRow()；
+    得到行。
+### Row getFirstRow()；
+    得到第一行。
+### Row getLastRow()；
+    得到最后一行。
+### Row getSpecifyRow(Cell key)；
+    得到指定行。
 
+
+## protected
+### Node();
+    不对外开放的node的简单构造.

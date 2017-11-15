@@ -9,7 +9,7 @@ import java.util.List;
  */
 public class Row
 {
-    // 每个Row中包含一个其他列
+    // 每个Row中包含一个所有列
     private List<Cell> cellList;
     // 每个Row中包含一个主键
     private Cell keyCell;
@@ -19,7 +19,7 @@ public class Row
     // 除了最大节点外，其他节点都拥有他的右节点
     private Row rightBrotherRow;
 
-    public boolean nullOrNot;
+    //public boolean nullOrNot;
 
     public Row(Cell key,List<Cell> cList)
     {
@@ -29,7 +29,7 @@ public class Row
 
     public Row()
     {
-        nullOrNot = true;
+
         keyCell = null;
         cellList = null;
     }
@@ -68,20 +68,18 @@ public class Row
         if(thisCell.getColumn().isMatch(keyCell.getColumn()))
         {
             keyCell = thisCell;
-            changeOrNot = true;
         }
-        else
+
+            // 对所有列进行遍历
+        for(int i = 0; i < cellList.size(); i++)
         {
-            // 对其他列进行遍历
-            for(int i = 0; i < cellList.size(); i++)
+            if(thisCell.getColumn().isMatch(cellList.get(i).getColumn()))
             {
-                if(thisCell.getColumn().isMatch(cellList.get(i).getColumn()))
-                {
-                    cellList.set(i,thisCell);
-                    changeOrNot = true;
-                }
+                cellList.set(i,thisCell);
+                changeOrNot = true;
             }
         }
+
         return changeOrNot;
     }
 
