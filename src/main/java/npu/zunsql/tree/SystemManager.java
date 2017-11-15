@@ -40,29 +40,21 @@ public class SystemManager
     {
         Table master = masterDB.getTable("master");
         Cursor masterCursor = master.createCursor();
+        Column keyColumn = master.getKeyColumn();
+        List<Column> columns = master.getColumns();
         Column valueColumn = master.getColumn("pageNumber");
-        Transaction loadTran = masterDB.beginReadTrans();
-        int dBPage = masterCursor.GetData(loadTran).getCell(valueColumn).getValue_Int();
-        if (dBPage >= 0)
-        {
-            loadTran.Commit()
-        }
-        else
-        {
-            loadTran.RollBack();
-        }
-        return new Database(dBPage);
+        masterCursor.MovetoUnpacked(keyCell);
+        Row data = masterCursor.GetData();
+        Cell value = data.getCell(valueColumn);
+        int dBPage = value.getValue_Int();
+        Page thisPage = masterDB.cacheManager.getPageFromFile(dBPage);
+        return new Database(thisPage);
     }
 
     public Database addDatabase(String dBName)
     {
         Table master = masterDB.getTable("master");
         Cursor masterCursor = master.createCursor();
-        Column keyColumn = master.getKeyColumn();
-        Column
-        Transaction addTran = masterDB.beginWriteTrans();
-
-        masterCursor.setData(addTran,);
         Column keyColumn = new Column(3,"name");
         Column valueColumn = new Column(1,"pageNumber");
         Cell keyCell = new Cell(keyColumn,dBName);
