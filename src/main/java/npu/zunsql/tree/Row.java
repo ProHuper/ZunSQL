@@ -21,15 +21,10 @@ public class Row
 
     public boolean nullOrNot;
 
-    public Row(Cell key,List<Cell> others)
+    public Row(Cell key,List<Cell> cList)
     {
         keyCell = key;
-        cellList = others;
-    }
-
-    public Row(Page thisPage)
-    {
-        super(thisPage.getPageID(),thisPage.getPageBuffer());
+        cellList = cList;
     }
 
     public Row()

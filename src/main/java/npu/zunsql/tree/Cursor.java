@@ -17,31 +17,31 @@ public class Cursor
 
     //boolean ClearCursor()
 
-    public boolean MovetoFirst()
+    public boolean MovetoFirst(Transaction thistran)
     {
         thisRow = aimTable.getRootNode().getFirstRow();
         return true;
     }
 
-    public boolean MovetoLast()
+    public boolean MovetoLast(Transaction thistran)
     {
         thisRow = aimTable.getRootNode().getLastRow();
         return true;
     }
 
-    public boolean MovetoNext()
+    public boolean MovetoNext(Transaction thistran)
     {
         thisRow = thisRow.getRightRow();
         return true;
     }
 
-    public boolean MovetoPrevious()
+    public boolean MovetoPrevious(Transaction thistran)
     {
         thisRow = thisRow.getLeftRow();
         return true;
     }
 
-    public boolean MovetoUnpacked(Cell keycell)
+    public boolean MovetoUnpacked(Transaction thistran,Cell keycell)
     {
         thisRow = aimTable.getRootNode().getSpecifyRow(keycell);
         return true;
@@ -60,22 +60,22 @@ public class Cursor
         return aimTable.getRootNode().insertRow(thisRow);
     }
 
-    public Cell GetKey()
+    public Cell GetKey(Transaction thistran)
     {
         return thisRow.getKeyCell();
     }
 
-    public Integer GetKeySize()
+    public Integer GetKeySize(Transaction thistran)
     {
         return 1;
     }
 
-    public Row GetData()
+    public Row GetData(Transaction thistran)
     {
         return thisRow;
     }
 
-    public Integer GetDataSize()
+    public Integer GetDataSize(Transaction thistran)
     {
         return 1;
     }

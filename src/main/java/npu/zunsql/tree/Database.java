@@ -21,7 +21,7 @@ public class Database
     private Page pageOne;
 
     // page层的Mgr，用于对Page层进行操作。
-    public CacheMgr cacheManager;
+    private CacheMgr cacheManager;
 
 
     //初始化数据库的名称
@@ -37,9 +37,9 @@ public class Database
         return  databaseList.get(name);
     }
 
-    public Database(Page thisPage)
+    public Database(int dBPage)
     {
-
+        pageOne = cacheManager.getPageFromFile(dBPage);
     }
 
     public boolean drop()

@@ -40,29 +40,46 @@ public class SystemManager
     {
         Table master = masterDB.getTable("master");
         Cursor masterCursor = master.createCursor();
-        Column keyColumn = master.getKeyColumn();
-        List<Column> columns = master.getColumns();
         Column valueColumn = master.getColumn("pageNumber");
-        masterCursor.MovetoUnpacked(keyCell);
-        Row data = masterCursor.GetData();
-        Cell value = data.getCell(valueColumn);
-        int dBPage = value.getValue_Int();
-        Page thisPage = masterDB.cacheManager.getPageFromFile(dBPage);
-        return new Database(thisPage);
+        Transaction loadTran = masterDB.beginReadTrans();
+        int dBPageID = masterCursor.GetData(loadTran).getCell(valueColumn).getValue_Int();
+        if (dBPageID >= 0)
+        {
+            loadTran.Commit()
+        }
+        else
+        {
+            loadTran.RollBack();
+        }
+        return new Database(dBPageID);
     }
 
     public Database addDatabase(String dBName)
     {
         Table master = masterDB.getTable("master");
         Cursor masterCursor = master.createCursor();
-        Column keyColumn = new Column(3,"name");
-        Column valueColumn = new Column(1,"pageNumber");
+        Column keyColumn = master.getKeyColumn();
+        Column valueColumn = master.getColumn("pageNumber");
         Cell keyCell = new Cell(keyColumn,dBName);
-        masterCursor.MovetoUnpacked(keyCell);
-        Row data = masterCursor.GetData();
-        Cell value = data.getCell(valueColumn);
-        int dBPage = value.getValue_Int();
-        Page thisPage = masterDB.cacheManager.getPageFromFile(dBPage);
-        return new Database(thisPage);
+        ByteBuffer tempBuffer = ByteBuffer.allocate(1024);
+        // 新建一个Page用于存储新的DB
+        Page newDBPage = new Page(tempBuffer);
+        Cell valueCell = new Cell(valueColumn,newDBPage.getPageID());
+        List<Cell> cList = null;
+        cList.add(keyCell);
+        cList.add(valueCell);
+        Row thisRow = new Row(keyCell,cList);
+
+        // 操作
+        Transaction addTran = masterDB.beginWriteTrans();
+        if (masterCursor.Insert(addTran,thisRow))
+        {
+            addTran.Commit()
+        }
+        else
+        {
+            addTran.RollBack();
+        }
+        return new Database(dBName);
     }
 }
