@@ -1,11 +1,15 @@
 package npu.zunsql.tree;
 
+import npu.zunsql.cache.Page;
+import  npu.zunsql.cache.CacheMgr;
+
+import java.nio.ByteBuffer;
 import java.util.List;
 
 /**
  * Created by Ed on 2017/10/29.
  */
-public class Database
+public class Database extends Page
 {
     //表示dataBase的名字
     private String dataBaseName;
@@ -15,9 +19,13 @@ public class Database
     //初始化数据库的名称
     public Database(String name)
     {
-        dataBaseName = name;
+        super(new Page(ByteBuffer.allocate(1024)));
     }
 
+    public Database(Page thisPage)
+    {
+        super(thisPage.getPageID(),thisPage.getPageBuffer());
+    }
 
     public boolean drop()
     {

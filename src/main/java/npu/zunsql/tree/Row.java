@@ -1,5 +1,7 @@
 package npu.zunsql.tree;
 
+import npu.zunsql.cache.Page;
+
 import java.util.List;
 
 /**
@@ -23,6 +25,11 @@ public class Row
     {
         keyCell = key;
         cellList = others;
+    }
+
+    public Row(Page thisPage)
+    {
+        super(thisPage.getPageID(),thisPage.getPageBuffer());
     }
 
     public Row()
