@@ -178,13 +178,13 @@ public class Database
         Page tablePage = new Page(tempBuffer);
         int pageID = tablePage.getPageID();
         tableList.put(tableName,pageID);
-        return new Table(tableName, key, columnList, pageID);   //NULL
+        return new Table(tableName, key, columnList, pageID,cacheManager,trans);   //NULL
     }
 
     //根据传来的表名返回Table表对象
     public Table getTable(Transaction thistran,String tableName)
     {
-        return new Table(tableName,tableList.get(tableName));
+        return new Table(tableList.get(tableName),cacheManager,thistran);
     }
 
     //给整个数据库中的表全部加锁
@@ -194,6 +194,7 @@ public class Database
         Table master = getTable(writeTran,"master");
         if(master.isLocked())
         {
+            writeTran.RollBack();
             return false;
         }
         else
@@ -201,8 +202,9 @@ public class Database
             for(String s:tableList.keySet())
             {
                 Table temp = getTable(writeTran,s);
-                temp.lock();
+                temp.lock(writeTran);
             }
+            writeTran.Commit();
             return true;
         }
     }
@@ -210,16 +212,21 @@ public class Database
     //给数据库中全部的表解锁
     public boolean unLock(Transaction thistran)
     {
-        if(tableList.get(0).isLocked())
+        Transaction writeTran = beginWriteTrans();
+        Table master = getTable(writeTran,"master");
+        if(master.isLocked())
         {
-            for (int i = 0; i < tableList.size(); i++)
+            for(String s:tableList.keySet())
             {
-                tableList.get(i).unLock(); //给它解锁
+                Table temp = getTable(writeTran,s);
+                temp.unLock(writeTran);
             }
+            writeTran.Commit();
             return true;
         }
         else
         {
+            writeTran.RollBack();
             return true;
         }
     }
