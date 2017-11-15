@@ -40,6 +40,11 @@ public class Cell
         value = 0;
     }
 
+    public String getType()
+    {
+        return thisColumn.getType();
+    }
+
     public boolean bigerThan(Cell cell)
     {
         return thisColumn.isBigger(this,cell);

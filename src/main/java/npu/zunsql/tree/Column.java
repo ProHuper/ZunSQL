@@ -27,9 +27,6 @@ public class Column
     // column中包含一个columnName。
     private String columnName;
 
-    public String getColumnName() {
-        return columnName;
-    }
 
     public Column(Integer type, String name)
     {
@@ -97,4 +94,38 @@ public class Column
             return false;
         }
     }
+    public String getType()
+    {
+        if(columnType==1)
+        {
+            return "Integer";
+        }
+        else if(columnType==2)
+        {
+            return "Float";
+        }
+        else if(columnType==3)
+        {
+            return "String";
+        }
+        else
+        {
+            return "columntypeisnotdefined";
+        }
+    }
+
+
+    public String getName()
+    {
+        return columnName;
+    }
+
+    public String getColumnName()
+    {
+        return columnName;
+    }
+
+
+
+
 }
