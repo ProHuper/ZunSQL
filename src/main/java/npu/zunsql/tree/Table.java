@@ -1,8 +1,5 @@
 package npu.zunsql.tree;
 
-import javafx.scene.control.Cell;
-
-import javax.lang.model.type.NullType;
 import java.util.List;
 
 /**
@@ -15,14 +12,14 @@ public class Table
     private Integer lock;
     private String tableName;
     private Column keyColumn;
-    private List<Column> otherColumn;
+    private List<Column> columns;
     private Node rootNode;
 
     public Table(String name,Column key,List<Column> others)
     {
         tableName = name;
         keyColumn = key;
-        otherColumn = others;
+        columns = others;
         lock = LO_SHARED;
         rootNode = new Node();
     }
@@ -32,7 +29,7 @@ public class Table
         lock = null;
         tableName = null;
         keyColumn = null;
-        otherColumn.clear();
+        columns.clear();
         rootNode = new Node();
         return true;
     }
@@ -89,6 +86,17 @@ public class Table
     }
     public List<Column> getColumns()
     {
-        return otherColumn;
+        return columns;
+    }
+    public Column getColumn(String columnName)
+    {
+        for(int i = 0; i < columns.size(); i++)
+        {
+            if(columns.get(i).getColumnName().equals(columnName))
+            {
+                return columns.get(i);
+            }
+        }
+        return null;
     }
 }

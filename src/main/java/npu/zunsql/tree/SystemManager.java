@@ -3,6 +3,7 @@ import npu.zunsql.cache.CacheMgr;
 import npu.zunsql.cache.Page;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -10,37 +11,58 @@ import java.util.Map;
  */
 public class SystemManager
 {
-    // Mgr页放在第一页
-    // 内容包括：database的对应页
-    private static Page pageOne;
-
-    // page层的Mgr，用于对Page层进行操作。
-    private static CacheMgr cacheMgr;
-
-    // 根据名称确定database页码
-    private static Map<String, Integer> databaseList;
+    // 用于管理其他数据库信息的数据库
+    // 此数据库中包含一张master表
+    // master表包含两列，数据库名为主键，以及pageNumber
+    Database masterDB;
 
     public SystemManager()
     {
-        pageOne = cacheMgr.getPageFromFile(0);
-        ByteBuffer thisBufer = pageOne.getPageBuffer();
-
+        masterDB = new Database("masterDB");
+        Column keyColumn = new Column(3,"name");
+        Column valueColumn = new Column(1,"pageNumber");
+        List<Column> columnList = null;
+        columnList.add(keyColumn);
+        columnList.add(valueColumn);
+        Transaction masterTran = masterDB.beginWriteTrans();
+        Table masterTable = masterDB.createTable("master",keyColumn,columnList,masterTran);
+        if(masterTable != null)
+        {
+            masterTran.Commit();
+        }
+        else
+        {
+            masterTran.RollBack();
+        }
     }
 
-
-    public int getDBPage(String name)
+    public Database loadDatabase(String dBName)
     {
-        return  databaseList.get(name);
-    }
-
-    public static Database loadDatabase(String dBName)
-    {
-        int dBPage = databaseList.get(dBName);
-        Page thisPage = cacheMgr.getPageFromFile(dBPage);
+        Table master = masterDB.getTable("master");
+        Cursor masterCursor = master.createCursor();
+        Column keyColumn = master.getKeyColumn();
+        List<Column> columns = master.getColumns();
+        Column valueColumn = master.getColumn("pageNumber");
+        masterCursor.MovetoUnpacked(keyCell);
+        Row data = masterCursor.GetData();
+        Cell value = data.getCell(valueColumn);
+        int dBPage = value.getValue_Int();
+        Page thisPage = masterDB.cacheManager.getPageFromFile(dBPage);
         return new Database(thisPage);
     }
-    public static boolean addDatabase(String dBName)
+
+    public Database addDatabase(String dBName)
     {
-        return true;
+        Table master = masterDB.getTable("master");
+        Cursor masterCursor = master.createCursor();
+        Column keyColumn = new Column(3,"name");
+        Column valueColumn = new Column(1,"pageNumber");
+        Cell keyCell = new Cell(keyColumn,dBName);
+        masterCursor.MovetoUnpacked(keyCell);
+        Row data = masterCursor.GetData();
+        Cell value = data.getCell(valueColumn);
+        int dBPage = value.getValue_Int();
+        Page thisPage = masterDB.cacheManager.getPageFromFile(dBPage);
+        return new Database(thisPage);
     }
 }

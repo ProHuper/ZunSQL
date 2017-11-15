@@ -9,22 +9,37 @@ import java.util.List;
 /**
  * Created by Ed on 2017/10/29.
  */
-public class Database extends Page
+public class Database
 {
     //表示dataBase的名字
     private String dataBaseName;
     //数据库中表的list的集合
     private List<Table> tableList;
 
+    // Mgr页放在第一页
+    // 内容包括：database的对应页
+    private Page pageOne;
+
+    // page层的Mgr，用于对Page层进行操作。
+    public CacheMgr cacheManager;
+
+
     //初始化数据库的名称
     public Database(String name)
     {
-        super(new Page(ByteBuffer.allocate(1024)));
+        cacheManager = new CacheMgr();
+        pageOne = cacheManager.getPageFromFile(0);
+        ByteBuffer thisBufer = pageOne.getPageBuffer();
+    }
+
+    public int getDBPage(String name)
+    {
+        return  databaseList.get(name);
     }
 
     public Database(Page thisPage)
     {
-        super(thisPage.getPageID(),thisPage.getPageBuffer());
+
     }
 
     public boolean drop()
