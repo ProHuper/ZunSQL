@@ -7,21 +7,34 @@ import java.util.List;
  */
 public class Table
 {
-    private final static int LO_LOCKED = 1;
-    private final static int LO_SHARED = 2;
+    public final static int LO_LOCKED = 1;
+    public final static int LO_SHARED = 2;
     private Integer lock;
     private String tableName;
     private Column keyColumn;
     private List<Column> columns;
     private Node rootNode;
 
-    public Table(String name,Column key,List<Column> colist)
+    // 已经新建好了一个page，只需要填写相关table信息
+    public Table(String name,Column key,List<Column> coList,int pageID)
     {
         tableName = name;
         keyColumn = key;
-        columns = colist;
+        columns = coList;
         lock = LO_SHARED;
         rootNode = new Node();
+    }
+
+    // 已有page，只需要加载其中的信息。
+    public Table(String name,int pageID)
+    {
+
+    }
+
+    // 需要自己新建Page，并填写相关table信息
+    public Table(String name,Column key,List<Column> coList)
+    {
+
     }
 
     public boolean drop()
@@ -63,18 +76,6 @@ public class Table
         return rootNode;
     }
 
-    public boolean getLock()
-
-    {
-        if(lock==1)
-        {
-            return  true;
-        }
-        else{
-            return false;
-        }
-    }
-
     public boolean lock()
     {
         lock = LO_LOCKED;   //NULL
@@ -92,17 +93,14 @@ public class Table
         Cursor cursor = new Cursor(this);
         return cursor;  //NULL
     }
-
     public Column getKeyColumn()
     {
         return keyColumn;
     }
-
     public List<Column> getColumns()
     {
         return columns;
     }
-
     public Column getColumn(String columnName)
     {
         for(int i = 0; i < columns.size(); i++)
@@ -114,8 +112,4 @@ public class Table
         }
         return null;
     }
-
-
-
-
 }

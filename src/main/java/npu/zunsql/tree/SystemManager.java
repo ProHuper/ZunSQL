@@ -25,7 +25,7 @@ public class SystemManager
         columnList.add(keyColumn);
         columnList.add(valueColumn);
         Transaction masterTran = masterDB.beginWriteTrans();
-        Table masterTable = masterDB.createTable("master",keyColumn,columnList,masterTran);
+        Table masterTable = masterDB.createTable("DBmaster",keyColumn,columnList,masterTran);
         if(masterTable != null)
         {
             masterTran.Commit();
@@ -38,31 +38,63 @@ public class SystemManager
 
     public Database loadDatabase(String dBName)
     {
-        Table master = masterDB.getTable("master");
+        // 读操作
+        Transaction loadTran = masterDB.beginReadTrans();
+        Table master = masterDB.getTable(loadTran,"master");
         Cursor masterCursor = master.createCursor();
-        Column keyColumn = master.getKeyColumn();
-        List<Column> columns = master.getColumns();
         Column valueColumn = master.getColumn("pageNumber");
-        masterCursor.MovetoUnpacked(keyCell);
-        Row data = masterCursor.GetData();
-        Cell value = data.getCell(valueColumn);
-        int dBPage = value.getValue_Int();
-        Page thisPage = masterDB.cacheManager.getPageFromFile(dBPage);
-        return new Database(thisPage);
+        int dBPageID = masterCursor.GetData(loadTran).getCell(valueColumn).getValue_Int();
+        if (dBPageID >= 0)
+        {
+            loadTran.Commit();
+        }
+        else
+        {
+            loadTran.RollBack();
+        }
+        return new Database(dBName,dBPageID);
     }
 
     public Database addDatabase(String dBName)
     {
-        Table master = masterDB.getTable("master");
+        // 读操作
+        Transaction readTran = masterDB.beginReadTrans();
+        Table master = masterDB.getTable(readTran,"master");
+        if (master != null)
+        {
+            readTran.Commit();
+        }
+        else
+        {
+            readTran.RollBack();
+        }
+
         Cursor masterCursor = master.createCursor();
-        Column keyColumn = new Column(3,"name");
-        Column valueColumn = new Column(1,"pageNumber");
+        Column keyColumn = master.getKeyColumn();
+        Column valueColumn = master.getColumn("pageNumber");
         Cell keyCell = new Cell(keyColumn,dBName);
-        masterCursor.MovetoUnpacked(keyCell);
-        Row data = masterCursor.GetData();
-        Cell value = data.getCell(valueColumn);
-        int dBPage = value.getValue_Int();
-        Page thisPage = masterDB.cacheManager.getPageFromFile(dBPage);
-        return new Database(thisPage);
+        ByteBuffer tempBuffer = ByteBuffer.allocate(1024);
+        // 新建一个Page用于存储新的DB
+        Page newDBPage = new Page(tempBuffer);
+        Cell valueCell = new Cell(valueColumn,newDBPage.getPageID());
+        List<Cell> cList = null;
+        cList.add(keyCell);
+        cList.add(valueCell);
+        Row thisRow = new Row(keyCell,cList);
+
+        // 写操作
+        Transaction addTran = masterDB.beginWriteTrans();
+        if (masterCursor.Insert(addTran,thisRow))
+        {
+            addTran.Commit();
+        }
+        else
+        {
+            addTran.RollBack();
+
+            // TODO：并且释放原本申请的Page空间。
+
+        }
+        return new Database(dBName,newDBPage);
     }
 }
