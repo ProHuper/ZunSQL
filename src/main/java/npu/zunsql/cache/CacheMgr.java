@@ -54,10 +54,11 @@ public class CacheMgr
     }
 
     /**提交transID对应的事务，将更新的副本页写回到cache中
-     *
-     * 如果当前页原始数据已经被缓存入cachePageMap，则命中页，更新之
-     * 否则，页缺失，将副本页写入缓存中
-     * 此时，若缓存已满，按照LRU策略将cacheList的第一页写入文件中
+	 * 1.先得到该事物修改过的page List，对于page list中的每个page 
+     * 2.将cache中的对应的原始page（如果cache命中）或者文件中的page读出来保存到日志文件中
+     * 3.如果cache命中，更新cache
+     * 4.直接写回到文件中
+     * 5.此时，若缓存已满，按照LRU策略将cacheList的第一页写入文件中
      */
     public boolean commitTransation(int transID) throws IOException {
         Transaction trans = transMgr.get(transID);
@@ -141,10 +142,11 @@ public class CacheMgr
                     if (tempPage != null)
                     {
                         tempPage.pageBuffer.put(srcPage.pageBuffer);
-                        //将该页同时写至数据库文件中
-                        if (db_file.exists() && db_file.isFile()) {
-                            this.setPageToFile(tempPage, db_file);
-                        }
+                    }
+                    //将该页同时写至数据库文件中
+                    //此处修改了一个bug by sqlu：不管是否cache命中，都要写回数据库文件
+                    if (db_file.exists() && db_file.isFile()) {
+                        this.setPageToFile(srcPage, db_file);
                     }
                 }
             }
