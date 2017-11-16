@@ -21,6 +21,8 @@ public class Row
 
     //public boolean nullOrNot;
 
+    public int pageID;
+
     public Row(Cell key,List<Cell> cList)
     {
         keyCell = key;
@@ -32,6 +34,11 @@ public class Row
 
         keyCell = null;
         cellList = null;
+    }
+
+    public Row(int pagID)
+    {
+        pageID = pagID;
     }
 
     public boolean setLeftRow(Row row)

@@ -150,9 +150,9 @@ public class Table
         return true;
     }
 
-    public Cursor createCursor()
+    public Cursor createCursor(Transaction thistran)
     {
-        return new Cursor(this);  //NULL
+        return new Cursor(this,thistran);  //NULL
     }
     public Column getKeyColumn()
     {

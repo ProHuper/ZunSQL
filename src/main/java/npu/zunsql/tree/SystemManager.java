@@ -2,6 +2,7 @@ package npu.zunsql.tree;
 import npu.zunsql.cache.CacheMgr;
 import npu.zunsql.cache.Page;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +29,11 @@ public class SystemManager
         Table masterTable = masterDB.createTable("DBmaster",keyColumn,columnList,masterTran);
         if(masterTable != null)
         {
-            masterTran.Commit();
+            try {
+                masterTran.Commit();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         else
         {
@@ -41,12 +46,16 @@ public class SystemManager
         // 读操作
         Transaction loadTran = masterDB.beginReadTrans();
         Table master = masterDB.getTable(loadTran,"master");
-        Cursor masterCursor = master.createCursor();
+        Cursor masterCursor = master.createCursor(loadTran);
         Column valueColumn = master.getColumn("pageNumber");
         int dBPageID = masterCursor.GetData(loadTran).getCell(valueColumn).getValue_Int();
         if (dBPageID >= 0)
         {
-            loadTran.Commit();
+            try {
+                loadTran.Commit();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         else
         {
@@ -62,14 +71,20 @@ public class SystemManager
         Table master = masterDB.getTable(readTran,"master");
         if (master != null)
         {
-            readTran.Commit();
+            try {
+                readTran.Commit();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         else
         {
             readTran.RollBack();
         }
 
-        Cursor masterCursor = master.createCursor();
+        // 写操作
+        Transaction addTran = masterDB.beginWriteTrans();
+        Cursor masterCursor = master.createCursor(addTran);
         Column keyColumn = master.getKeyColumn();
         Column valueColumn = master.getColumn("pageNumber");
         Cell keyCell = new Cell(keyColumn,dBName);
@@ -82,11 +97,13 @@ public class SystemManager
         cList.add(valueCell);
         Row thisRow = new Row(keyCell,cList);
 
-        // 写操作
-        Transaction addTran = masterDB.beginWriteTrans();
         if (masterCursor.Insert(addTran,thisRow))
         {
-            addTran.Commit();
+            try {
+                addTran.Commit();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         else
         {

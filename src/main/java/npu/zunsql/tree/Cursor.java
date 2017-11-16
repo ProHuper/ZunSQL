@@ -7,77 +7,78 @@ public class Cursor
 {
 
     private Table aimTable;
-    private Row thisRow;
+    private Row thisRowPageID;
 
-    public Cursor(Table thisTable)
+    public Cursor(Table thisTable,Transaction thistran)
     {
         aimTable = thisTable;
-        thisRow = aimTable.getRootNode().getRow();
+        thisRowPageID = aimTable.getRootNode(thistran).getRow();
+
     }
 
     //boolean ClearCursor()
 
     public boolean MovetoFirst(Transaction thistran)
     {
-        thisRow = aimTable.getRootNode().getFirstRow();
+        thisRowPageID = aimTable.getRootNode(thistran).getFirstRow();
         return true;
     }
 
     public boolean MovetoLast(Transaction thistran)
     {
-        thisRow = aimTable.getRootNode().getLastRow();
+        thisRowPageID = aimTable.getRootNode(thistran).getLastRow();
         return true;
     }
 
     public boolean MovetoNext(Transaction thistran)
     {
-        thisRow = thisRow.getRightRow();
+        thisRowPageID = thisRowPageID.getRightRow();
         return true;
     }
 
     public boolean MovetoPrevious(Transaction thistran)
     {
-        thisRow = thisRow.getLeftRow();
+        thisRowPageID = thisRowPageID.getLeftRow();
         return true;
     }
 
     public boolean MovetoUnpacked(Transaction thistran,Cell keycell)
     {
-        thisRow = aimTable.getRootNode().getSpecifyRow(keycell);
+        thisRowPageID = aimTable.getRootNode(thistran).getSpecifyRow(keycell);
         return true;
     }
 
     public boolean Delete(Transaction thistran)
     {
-        thisRow = thisRow.getRightRow();
-        aimTable.getRootNode().deleteRow(thisRow.getKeyCell());
+        thisRowPageID = thisRowPageID.getRightRow();
+        aimTable.getRootNode(thistran).deleteRow(thisRowPageID.getKeyCell());
         return true;
     }
 
     public boolean Insert(Transaction thistran,Row row)
     {
-        thisRow = row;
-        return aimTable.getRootNode().insertRow(thisRow);
+        thisRowPageID = row;
+        return aimTable.getRootNode(thistran).insertRow(thisRowPageID);
     }
 
     public Cell GetKey(Transaction thistran)
     {
-        return thisRow.getKeyCell();
+        return thisRowPageID.getKeyCell();
     }
 
     public Integer GetKeySize(Transaction thistran)
     {
-       if(thisRow.getKeyCell().getType().equals("Integer"))
+       if(thisRowPageID.getKeyCell().getType().equals("Integer"))
        {
            return 4;
        }
-       else if(thisRow.getKeyCell().getType().equals("Float"))
+       else if(thisRowPageID.getKeyCell().getType().equals("Float"))
        {
            return 8;
        }
-       else if(thisRow.getKeyCell().getType().equals("String"))
+       else if(thisRowPageID.getKeyCell().getType().equals("String"))
        {
-           return thisRow.getKeyCell().getValue_String().length());
+           return thisRowPageID.getKeyCell().getValue_String().length();
        }
        else
        {
@@ -87,7 +88,7 @@ public class Cursor
 
     public Row GetData(Transaction thistran)
     {
-        return thisRow;
+        return thisRowPageID;
     }
 
     public Integer GetDataSize(Transaction thistran)
@@ -97,11 +98,11 @@ public class Cursor
 
     public boolean setData(Transaction thistran,Row row)
     {
-        thisRow = row;
-        Cursor deleteRow = new Cursor(aimTable);
-        deleteRow.MovetoUnpacked(aimTable.getRootNode().getSpecifyRow(row.getKeyCell()));
+        thisRowPageID = row;
+        Cursor deleteRow = new Cursor(aimTable,thistran);
+        deleteRow.MovetoUnpacked(thistran,row.getKeyCell());
         deleteRow.Delete(thistran);
-        this.Insert(thistran,row);
+        Insert(thistran,row);
         return true;
     }
 }

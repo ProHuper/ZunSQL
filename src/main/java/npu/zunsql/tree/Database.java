@@ -4,6 +4,7 @@ import npu.zunsql.cache.Page;
 import  npu.zunsql.cache.CacheMgr;
 import sun.awt.image.DataBufferNative;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
@@ -83,7 +84,11 @@ public class Database
         Table masterTable = createTable("master",keyColumn,columnList,masterTran);
         if(masterTable != null)
         {
-            masterTran.Commit();
+            try {
+                masterTran.Commit();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             return true;
         }
         else
@@ -123,7 +128,11 @@ public class Database
 
         if (pageOne != null)
         {
-            readTran.Commit();
+            try {
+                readTran.Commit();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             return true;
         }
         else
@@ -140,7 +149,11 @@ public class Database
         masterTran = beginWriteTrans();
         if(cacheManager.writePage(masterTran.tranNum,pageOne))
         {
-            masterTran.Commit();
+            try {
+                masterTran.Commit();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             return true;
         }
         else
@@ -160,13 +173,13 @@ public class Database
     //开始一个读事务操作
     public Transaction beginReadTrans()
     {
-        return new ReadTran(cacheManager.beginTransation("r"));
+        return new ReadTran(cacheManager.beginTransation("r"),cacheManager);
     }
 
     //开始一个写事务
     public Transaction beginWriteTrans()
     {
-        return new WriteTran(cacheManager.beginTransation("w"));
+        return new WriteTran(cacheManager.beginTransation("w"),cacheManager);
     }
 
     //根据传来的表名，主键以及其他的列名来新建一个表放入tableList中
@@ -204,7 +217,11 @@ public class Database
                 Table temp = getTable(writeTran,s);
                 temp.lock(writeTran);
             }
-            writeTran.Commit();
+            try {
+                writeTran.Commit();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             return true;
         }
     }
@@ -221,7 +238,11 @@ public class Database
                 Table temp = getTable(writeTran,s);
                 temp.unLock(writeTran);
             }
-            writeTran.Commit();
+            try {
+                writeTran.Commit();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             return true;
         }
         else

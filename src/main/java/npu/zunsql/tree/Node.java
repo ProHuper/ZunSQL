@@ -15,104 +15,136 @@ public class Node {
     public final static int M = 3;
 
     // 每个节点包含不少于M/2，不超过M的Row。
-    private List<Row> rowList;
+    private List<Integer> rowPageList;
 
     // 每个节点包含不少于M/2+1，不超过M+1的SonNode。
-    private List<Node> sonList;
+    private List<Integer> sonPageList;
 
     // 表示父亲节点
-    private Node father;
+    private int father;
 
     // 表示本节点在父亲节点儿子中的第几位。
     private int order;
 
-    // Node简单的构造方法
-    protected Node()
-    {
-        rowList = new ArrayList<Row>();
-        sonList = new ArrayList<Node>();
-        father = null;
-        order = -1;
-    }
+    // 表示PageID
+    private int pageID;
 
     protected Node(Page thisPage)
     {
+        rowPageList = null;
+        sonPageList = null;
+        father = -1;
+        order = -1;
+        pageID = thisPage.getPageID();
+    }
 
+    protected Node(int thisPageID)
+    {
+        pageID = thisPageID;
     }
 
     // 根据Node的属性构造Node。
-    private Node(List<Row> thisRowList, List<Node> thisSonList, int thisOrder)
+    private Node(List<Integer> thisRowList, List<Integer> thisSonList, int thisOrder)
     {
-        rowList = thisRowList;
-        sonList = thisSonList;
-        father = null;
+        rowPageList = thisRowList;
+        sonPageList = thisSonList;
+        father = -1;
 
         // 为每一位儿子维护父亲和排位信息。
-        for (int i = 0; i < sonList.size(); i++)
+        for (int i = 0; i < sonPageList.size(); i++)
         {
-            sonList.get(i).father = this;
-            sonList.get(i).order = i;
+            new Node(sonPageList.get(i)).setFather(pageID);
+            new Node(sonPageList.get(i)).setOrder(i);
         }
 
         // 维护自身排位信息。
         order = thisOrder;
     }
 
+    private boolean setFather(int ID)
+    {
+        father = ID;
+
+        // TODO：维护page信息
+
+        return true;
+    }
+
+
+    private boolean setOrder(int or)
+    {
+        order = or;
+
+        // TODO：维护page信息
+
+        return true;
+    }
+
     // 分裂除根节点外的其他节点。
     private Node devideNode()
     {
-        List<Row> rightRow;
-        List<Node> rightNode;
-        rightRow = rowList.subList(M/2 + 1, M);
-        rowList = rowList.subList(0, M/2);
-        rightNode = sonList.subList(M/2 + 1,M + 1);
-        sonList = sonList.subList(0, M/2 + 1);
+        List<Integer> rightRow;
+        List<Integer> rightNode;
+        rightRow = rowPageList.subList(M/2 + 1, M);
+        rowPageList = rowPageList.subList(0, M/2);
+        rightNode = sonPageList.subList(M/2 + 1,M + 1);
+        sonPageList = sonPageList.subList(0, M/2 + 1);
         return new Node(rightRow, rightNode, order + 1);
     }
 
     // 分裂根节点
     private boolean rootDevideNode()
     {
-        List<Row> leftRow;
-        List<Row> rightRow;
-        List<Node> leftNode;
-        List<Node> rightNode;
-        leftRow = rowList.subList(0, M/2);
-        leftNode = sonList.subList(0, M/2 + 1);
-        rightRow = rowList.subList(M/2 + 1, M);
-        rightNode = sonList.subList(M/2 + 1, M + 1);
-        rowList = rowList.subList(M/2, M/2 + 1);
-        List<Node> newSonList = new ArrayList<Node>();
-        newSonList.add(new Node(leftRow, leftNode, 0));
-        newSonList.add(new Node(rightRow, rightNode,1));
-        sonList = newSonList;
+        List<Integer> leftRow;
+        List<Integer> rightRow;
+        List<Integer> leftNode;
+        List<Integer> rightNode;
+        leftRow = rowPageList.subList(0, M/2);
+        leftNode = sonPageList.subList(0, M/2 + 1);
+        rightRow = rowPageList.subList(M/2 + 1, M);
+        rightNode = sonPageList.subList(M/2 + 1, M + 1);
+        rowPageList = rowPageList.subList(M/2, M/2 + 1);
+        List<Integer> newSonList = null;
+        newSonList.add(new Node(leftRow, leftNode, 0).pageID);
+        newSonList.add(new Node(rightRow, rightNode,1).pageID);
+        sonPageList = newSonList;
         return true;
     }
 
     // 调整本节点使其顺序为sonOrder的儿子row数量恢复至M/2
     private boolean adjustNode(int sonOrder)
     {
+        Node thisSonNode = new Node(sonPageList.get(sonOrder));
+
         // 排除最大值边界越界情况，向左下合并
-        if (sonOrder < sonList.size() - 1 && sonList.get(sonOrder + 1).rowList.size() > M/2)
+        if (sonOrder < sonPageList.size() - 1)
         {
-            sonList.get(sonOrder).insertRow(rowList.get(sonOrder));
-            rowList.set(sonOrder,sonList.get(sonOrder + 1).getFirstRow());
-            sonList.get(sonOrder + 1).deleteRow(rowList.get(sonOrder).getKeyCell());
-            return true;
+            Node rightSonNode = new Node(sonPageList.get(sonOrder + 1));
+            if (rightSonNode.rowPageList.size() > M/2)
+            {
+                thisSonNode.insertRow(rowPageList.get(sonOrder));
+                rowPageList.set(sonOrder, rightSonNode.getFirstRow().pageID);
+                rightSonNode.deleteRow(new Row(rowPageList.get(order)).getKeyCell());
+                return true;
+            }
+
         }
+
         // 排除零值边界越界情况，向右下合并
-        else if (sonOrder > 0 && sonList.get(sonOrder - 1).rowList.size() > M/2)
+        if (sonOrder > 0)
         {
-            sonList.get(sonOrder).insertRow(rowList.get(sonOrder - 1));
-            rowList.set(sonOrder - 1, sonList.get(sonOrder - 1).getLastRow());
-            sonList.get(sonOrder - 1).deleteRow(rowList.get(sonOrder - 1).getKeyCell());
-            return true;
+            Node leftSonNode = new Node(sonPageList.get(sonOrder - 1));
+            if (leftSonNode.rowPageList.size() > M/2)
+            {
+                thisSonNode.insertRow(rowPageList.get(sonOrder - 1));
+                rowPageList.set(sonOrder - 1, leftSonNode.getLastRow().pageID);
+                leftSonNode.deleteRow(new Row(rowPageList.get(order)).getKeyCell());
+                return true;
+            }
         }
+
         // 没有相邻的可支援兄弟节点，只好删除此节点。
-        else
-        {
-            return deleteNode(sonOrder);
-        }
+        return deleteNode(sonOrder);
     }
 
     // 在本节点中添加子节点，分别添加row和对应的SonNode。
@@ -120,18 +152,20 @@ public class Node {
     {
         // 用于记录是否添加了这个节点。
         boolean addOrNot = false;
-        for (int i = 0; i < rowList.size(); i++)
+        for (int i = 0; i < rowPageList.size(); i++)
         {
-            if (rowList.get(i).getKeyCell().bigerThan(row.getKeyCell()))
+            Row thisRow = new Row(rowPageList.get(i));
+            Node thisNode = new Node(sonPageList.get(i));
+            if (thisRow.getKeyCell().bigerThan(row.getKeyCell()))
             {
-                row.setLeftRow(rowList.get(i).getLeftRow());
-                row.setRightRow(rowList.get(i));
-                rowList.get(i).getLeftRow().setRightRow(row);
-                rowList.get(i).setLeftRow(row);
-                rowList.add(i, row);
-                sonList.add(i, node);
-                sonList.get(i).order = i;
-                sonList.get(i).father = this;
+                row.setLeftRow(thisRow.getLeftRow());
+                row.setRightRow(thisRow);
+                thisRow.getLeftRow().setRightRow(row);
+                thisRow.setLeftRow(row);
+                rowPageList.add(i, row.pageID);
+                sonPageList.add(i, node.pageID);
+                thisNode.order = i;
+                thisNode.father = pageID;
                 addOrNot = true;
                 break;
             }
@@ -139,67 +173,70 @@ public class Node {
         // 如果之前都没有添加这个节点，那么此时添加至末尾。
         if (!addOrNot)
         {
-            if (rowList.size() == 0)
+            if (rowPageList.size() == 0)
             {
                 row.setLeftRow(null);
             }
             else
             {
-                row.setLeftRow(rowList.get(rowList.size() - 1));
-                rowList.get(rowList.size() - 1).setRightRow(row);
+                row.setLeftRow(new Row(rowPageList.get(rowPageList.size() - 1)));
+                new Row(rowPageList.get(rowPageList.size() - 1)).setRightRow(row);
             }
             row.setRightRow(null);
-            rowList.add(row);
-            sonList.add(sonList.size() - 2, node);
+            rowPageList.add(row.pageID);
+            sonPageList.add(sonPageList.size() - 2, node.pageID);
         }
 
         // 当未超出长度时，插入完毕。
-        if (rowList.size() <= M)
+        if (rowPageList.size() <= M)
         {
             return true;
         }
         // 超出长度时，进行单元分裂。
         else
         {
-            if (father == null)
+            if (father < 0)
             {
                 return rootDevideNode();
             }
             else
             {
-                return father.addNode(rowList.get(M/2),devideNode());
+                return new Node(father).addNode(new Row(rowPageList.get(M/2)),devideNode());
             }
         }
     }
 
     private boolean deleteNode(int sonOrder)
     {
-        if (sonOrder < sonList.size() - 1)
+        Row thisRow;
+        if (sonOrder < sonPageList.size() - 1)
         {
-            sonList.get(sonOrder + 1).insertRow(rowList.get(sonOrder));
-            if (sonOrder < rowList.size() - 1)
+            thisRow = new Row(rowPageList.get(sonOrder));
+            Node rightNode = new Node(sonPageList.get(sonOrder + 1));
+            rightNode.insertRow(thisRow);
+            if (sonOrder < rowPageList.size() - 1)
             {
-                rowList.get(sonOrder).getRightRow().setLeftRow(rowList.get(sonOrder).getLeftRow());
+                thisRow.getRightRow().setLeftRow(thisRow.getLeftRow());
 
             }
             if (sonOrder > 0)
             {
-                rowList.get(sonOrder).getLeftRow().setRightRow(rowList.get(sonOrder).getRightRow());
+                thisRow.getLeftRow().setRightRow(thisRow.getRightRow());
             }
-            rowList.remove(sonOrder);
-            sonList.remove(sonOrder);
-            for (int i = sonOrder; i < sonList.size(); i++)
+            rowPageList.remove(sonOrder);
+            sonPageList.remove(sonOrder);
+            for (int i = sonOrder; i < sonPageList.size(); i++)
             {
-                sonList.get(i).order = i;
+                new Node(sonPageList.get(i)).order = i;
             }
-            if (rowList.size() < M/2)
+            if (rowPageList.size() < M/2)
             {
-                if (father == null)
+                if (father < 0)
                 {
-                    if (rowList.size() < 1)
+                    if (rowPageList.size() < 1)
                     {
-                        rowList = sonList.get(0).rowList;
-                        sonList = sonList.get(0).sonList;
+                        rowPageList = new Node(sonPageList.get(0)).rowPageList;
+                        sonPageList = new Node(sonPageList.get(0)).sonPageList;
                         return true;
                     }
                     else
@@ -209,7 +246,7 @@ public class Node {
                 }
                 else
                 {
-                    return father.adjustNode(order);
+                    return new Node(father).adjustNode(order);
                 }
             }
             else
@@ -219,30 +256,32 @@ public class Node {
         }
         else
         {
-            sonList.get(sonOrder - 1).insertRow(rowList.get(sonOrder - 1));
-            if (sonOrder < rowList.size() - 1)
+            thisRow = new Row(rowPageList.get(sonOrder - 1));
+            Node leftNode = new Node(sonPageList.get(sonOrder - 1));
+            leftNode.insertRow(thisRow);
+            if (sonOrder < rowPageList.size() - 1)
             {
-                rowList.get(sonOrder).getRightRow().setLeftRow(rowList.get(sonOrder).getLeftRow());
+                thisRow.getRightRow().setLeftRow(thisRow.getLeftRow());
 
             }
             if (sonOrder > 0)
             {
-                rowList.get(sonOrder).getLeftRow().setRightRow(rowList.get(sonOrder).getRightRow());
+                thisRow.getLeftRow().setRightRow(thisRow.getRightRow());
             }
-            rowList.remove(sonOrder - 1);
-            sonList.remove(sonOrder);
-            for (int i = sonOrder; i < sonList.size(); i++)
+            rowPageList.remove(sonOrder - 1);
+            sonPageList.remove(sonOrder);
+            for (int i = sonOrder; i < sonPageList.size(); i++)
             {
-                sonList.get(i).order = i;
+                new Node(sonPageList.get(i)).order = i;
             }
-            if (rowList.size() < M/2)
+            if (rowPageList.size() < M/2)
             {
-                if (father == null)
+                if (father < 0)
                 {
-                    if (rowList.size() < 1)
+                    if (rowPageList.size() < 1)
                     {
-                        rowList = sonList.get(0).rowList;
-                        sonList = sonList.get(0).sonList;
+                        rowPageList = new Node(sonPageList.get(0)).rowPageList;
+                        sonPageList = new Node(sonPageList.get(0)).sonPageList;
                         return true;
                     }
                     else
@@ -252,7 +291,7 @@ public class Node {
                 }
                 else
                 {
-                    return father.adjustNode(order);
+                    return new Node(father).adjustNode(order);
                 }
             }
             else
@@ -262,17 +301,22 @@ public class Node {
         }
     }
 
+    public boolean insertRow(int rowID)
+    {
+        return insertRow(new Row(rowID));
+    }
+
     public boolean insertRow(Row row)
     {
         boolean insertOrNot = false;
         int insertNumber = 0;
-        for (int i = 0; i < rowList.size(); i++)
+        for (int i = 0; i < rowPageList.size(); i++)
         {
-            if (rowList.get(i).getKeyCell().equalTo(row.getKeyCell()))
+            if (new Row(rowPageList.get(i)).getKeyCell().equalTo(row.getKeyCell()))
             {
                 return false;
             }
-            else if (rowList.get(i).getKeyCell().bigerThan(row.getKeyCell()))
+            else if (new Row(rowPageList.get(i)).getKeyCell().bigerThan(row.getKeyCell()))
             {
                 insertNumber = i;
                 insertOrNot = true;
@@ -281,30 +325,30 @@ public class Node {
         }
         if (!insertOrNot)
         {
-            insertNumber = rowList.size();
+            insertNumber = rowPageList.size();
         }
-        if (sonList == null)
+        if (sonPageList == null)
         {
-            rowList.add(insertNumber,row);
-            if (rowList.size() <= M)
+            rowPageList.add(insertNumber,row.pageID);
+            if (rowPageList.size() <= M)
             {
                 return true;
             }
             else
             {
-                if (father == null)
+                if (father < 0)
                 {
                     return rootDevideNode();
                 }
                 else
                 {
-                    return father.addNode(rowList.get(M/2),devideNode());
+                    return new Node(father).addNode(new Row(rowPageList.get(M/2)),devideNode());
                 }
             }
         }
         else
         {
-            return sonList.get(insertNumber).insertRow(row);
+            return new Node(sonPageList.get(insertNumber)).insertRow(row);
         }
     }
 
@@ -312,30 +356,31 @@ public class Node {
     {
         boolean deleteOrNot = false;
         int deleteNumber = 0;
-        for (int i = 0; i < rowList.size(); i++)
+        for (int i = 0; i < rowPageList.size(); i++)
         {
-            if (rowList.get(i).getKeyCell().equalTo(key))
+            Row thisRow = new Row(rowPageList.get(i));
+            if (thisRow.getKeyCell().equalTo(key))
             {
-                if (sonList == null)
+                if (sonPageList == null)
                 {
-                    if (i < rowList.size() - 1)
+                    if (i < rowPageList.size() - 1)
                     {
-                        rowList.get(i).getRightRow().setLeftRow(rowList.get(i).getLeftRow());
+                        thisRow.getRightRow().setLeftRow(thisRow.getLeftRow());
 
                     }
                     if (i > 0)
                     {
-                        rowList.get(i).getLeftRow().setRightRow(rowList.get(i).getRightRow());
+                        thisRow.getLeftRow().setRightRow(thisRow.getRightRow());
                     }
-                    rowList.remove(i);
-                    if (rowList.size() < M/2)
+                    rowPageList.remove(i);
+                    if (rowPageList.size() < M/2)
                     {
-                        if (father == null)
+                        if (father < 0)
                         {
-                            if (rowList.size() < 1)
+                            if (rowPageList.size() < 1)
                             {
-                                rowList = sonList.get(0).rowList;
-                                sonList = sonList.get(0).sonList;
+                                rowPageList = new Node(sonPageList.get(0)).rowPageList;
+                                sonPageList = new Node(sonPageList.get(0)).sonPageList;
                                 return true;
                             }
                             else
@@ -345,7 +390,7 @@ public class Node {
                         }
                         else
                         {
-                            return father.adjustNode(order);
+                            return new Node(father).adjustNode(order);
                         }
                     }
                     else
@@ -355,11 +400,11 @@ public class Node {
                 }
                 else
                 {
-                    rowList.set(i, rowList.get(i).getRightRow());
-                    return sonList.get(i + 1).deleteRow(rowList.get(i).getRightRow().getKeyCell());
+                    rowPageList.set(i, thisRow.getRightRow().pageID);
+                    return new Node(sonPageList.get(i + 1)).deleteRow(thisRow.getRightRow().getKeyCell());
                 }
             }
-            else if (rowList.get(i).getKeyCell().bigerThan(key))
+            else if (thisRow.getKeyCell().bigerThan(key))
             {
                 deleteNumber = i;
                 deleteOrNot = true;
@@ -368,23 +413,23 @@ public class Node {
         }
         if (!deleteOrNot)
         {
-            deleteNumber = rowList.size();
+            deleteNumber = rowPageList.size();
         }
-        if (sonList == null)
+        if (sonPageList == null)
         {
             return false;
         }
         else
         {
-            return sonList.get(deleteNumber).deleteRow(key);
+            return new Node(sonPageList.get(deleteNumber)).deleteRow(key);
         }
     }
 
     public Row getRow()
     {
-        if (rowList.size() > 0)
+        if (rowPageList.size() > 0)
         {
-            return rowList.get(0);
+            return new Row(rowPageList.get(0));
         }
         else
         {
@@ -394,55 +439,56 @@ public class Node {
 
     public Row getFirstRow()
     {
-        if (sonList == null)
+        if (sonPageList == null)
         {
-            return rowList.get(0);
+            return new Row(rowPageList.get(0));
         }
         else
         {
-            return sonList.get(0).getFirstRow();
+            return new Node(sonPageList.get(0)).getFirstRow();
         }
     }
 
     public Row getLastRow()
     {
-        if (sonList == null)
+        if (sonPageList == null)
         {
-            return rowList.get(rowList.size() - 1);
+            return new Row(rowPageList.get(rowPageList.size() - 1));
         }
         else
         {
-            return sonList.get(sonList.size() - 1).getLastRow();
+            return new Node(sonPageList.get(sonPageList.size() - 1)).getLastRow();
         }
     }
 
     public Row getSpecifyRow(Cell key)
     {
         int insertNumber = -1;
-        for (int i = 0; i < rowList.size(); i++)
+        for (int i = 0; i < rowPageList.size(); i++)
         {
-            if (rowList.get(i).getKeyCell().equalTo(key))
+            Row thisRow = new Row(rowPageList.get(i));
+            if (thisRow.getKeyCell().equalTo(key))
             {
-                return rowList.get(i);
+                return thisRow;
             }
-            else if (rowList.get(i).getKeyCell().bigerThan(key))
+            else if (thisRow.getKeyCell().bigerThan(key))
             {
-                if (sonList == null)
+                if (sonPageList == null)
                 {
                     insertNumber = i;
                     break;
                 }
                 else
                 {
-                    return sonList.get(i).getSpecifyRow(key);
+                    return new Node(sonPageList.get(i)).getSpecifyRow(key);
                 }
             }
         }
-        if (sonList == null)
+        if (sonPageList == null)
         {
             if (insertNumber > 0)
             {
-                return rowList.get(insertNumber);
+                return new Row(rowPageList.get(insertNumber));
             }
             else
             {
@@ -451,7 +497,7 @@ public class Node {
         }
         else
         {
-            return sonList.get(sonList.size() - 1).getSpecifyRow(key);
+            return new Node(sonPageList.get(sonPageList.size() - 1)).getSpecifyRow(key);
         }
 
     }
