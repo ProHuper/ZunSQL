@@ -141,10 +141,11 @@ public class CacheMgr
                     if (tempPage != null)
                     {
                         tempPage.pageBuffer.put(srcPage.pageBuffer);
-                        //将该页同时写至数据库文件中
-                        if (db_file.exists() && db_file.isFile()) {
-                            this.setPageToFile(tempPage, db_file);
-                        }
+                    }
+                    //将该页同时写至数据库文件中
+                    //此处修改了一个bug by sqlu：不管是否cache命中，都要写回数据库文件
+                    if (db_file.exists() && db_file.isFile()) {
+                        this.setPageToFile(srcPage, db_file);
                     }
                 }
             }
