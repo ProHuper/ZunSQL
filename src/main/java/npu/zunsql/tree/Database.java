@@ -2,10 +2,11 @@ package npu.zunsql.tree;
 
 import npu.zunsql.cache.Page;
 import  npu.zunsql.cache.CacheMgr;
-import sun.awt.image.DataBufferNative;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -25,20 +26,18 @@ public class Database
     private CacheMgr cacheManager;
 
     // 数据库中的table集合，根据表名，映射页码
-    Map<String,Integer> tableList;
+    private Map<String,Integer> tableList = new HashMap<String, Integer>();
 
     // 已经新建了一个Page，只需要进行相关Page写操作。
-    public Database(String name,Page newPage)
+    protected Database(String name,Page newPage)
     {
         dBName = name;
         cacheManager = new CacheMgr(dBName);
         pageOne = newPage;
-        tableList = null;
 
         addMasterTable();
 
         ByteBuffer thisBufer = pageOne.getPageBuffer();
-
         // TODO: 修改thisBufer.
 
 
@@ -46,29 +45,42 @@ public class Database
     }
 
     // 存在一个db，只需要读取即可。
-    public Database(String name,int pageID)
+    protected Database(String name,int pageID)
     {
         dBName = name;
         cacheManager = new CacheMgr(dBName);
-        loadMyPage(pageID);
+        if(!loadMyPage(pageID))
+        {
+            if (newMyPage())
+            {
+                if(addMasterTable())
+                {
+                    ByteBuffer thisBufer = pageOne.getPageBuffer();
+                    // TODO: 修改thisBufer.
+
+
+                    writeMyPage();
+                }
+            }
+        }
     }
 
     // 首先新建一个Page，然后进行相关Page写操作。
-    public Database(String name)
+    protected Database(String name)
     {
         dBName = name;
         cacheManager = new CacheMgr(dBName);
-        newMyPage();
-        tableList = null;
-
-        addMasterTable();
-
-        ByteBuffer thisBufer = pageOne.getPageBuffer();
-
-        // TODO: 修改thisBufer.
+        if (newMyPage())
+        {
+            if(addMasterTable())
+            {
+                ByteBuffer thisBufer = pageOne.getPageBuffer();
+                // TODO: 修改thisBufer.
 
 
-        writeMyPage();
+                while(!writeMyPage());
+            }
+        }
     }
 
 
@@ -77,7 +89,7 @@ public class Database
         // 添加master table
         Column keyColumn = new Column(3,"tableName");
         Column valueColumn = new Column(1,"pageNumber");
-        List<Column> columnList = null;
+        List<Column> columnList = new ArrayList<>();
         columnList.add(keyColumn);
         columnList.add(valueColumn);
         Transaction masterTran = beginWriteTrans();
@@ -107,22 +119,15 @@ public class Database
         // TODO：QUE:不需要事务编号吗？
         pageOne = new Page(tempBuffer);
 
-        if (pageOne != null)
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
+        return pageOne != null;
     }
 
     private boolean loadMyPage(int pageID)
     {
         Transaction readTran = beginReadTrans();
         pageOne = cacheManager.readPage(readTran.tranNum,pageID);
-        ByteBuffer thisBufer = pageOne.getPageBuffer();
 
+        ByteBuffer thisBufer = pageOne.getPageBuffer();
         // TODO: 读取thisBuffer.
 
 
@@ -146,7 +151,6 @@ public class Database
     {
         // 写本页
         Transaction masterTran = beginWriteTrans();
-        masterTran = beginWriteTrans();
         if(cacheManager.writePage(masterTran.tranNum,pageOne))
         {
             try {
@@ -163,7 +167,7 @@ public class Database
         }
     }
 
-    public boolean drop(Transaction thistran)
+    public boolean drop(Transaction thisTran)
     {
         // TODO：递归释放此Page
 
@@ -183,7 +187,7 @@ public class Database
     }
 
     //根据传来的表名，主键以及其他的列名来新建一个表放入tableList中
-    public Table createTable(String tableName, Column key, List<Column> columnList, Transaction trans)
+    public Table createTable(String tableName, Column key, List<Column> columnList, Transaction thisTran)
     {
         // TODO: 此处存在问题，1024没有意义。
         ByteBuffer tempBuffer = ByteBuffer.allocate(1024);
@@ -191,63 +195,56 @@ public class Database
         Page tablePage = new Page(tempBuffer);
         int pageID = tablePage.getPageID();
         tableList.put(tableName,pageID);
-        return new Table(tableName, key, columnList, pageID,cacheManager,trans);   //NULL
+        return new Table(tableName, key, columnList, pageID,cacheManager,thisTran);   //NULL
     }
 
     //根据传来的表名返回Table表对象
-    public Table getTable(Transaction thistran,String tableName)
+    public Table getTable(String tableName,Transaction thisTran)
     {
-        return new Table(tableList.get(tableName),cacheManager,thistran);
+        if(tableList.get(tableName) == null)
+        {
+            return null;
+        }
+        else
+        {
+            return new Table(tableList.get(tableName),cacheManager,thisTran);
+        }
     }
 
     //给整个数据库中的表全部加锁
-    public boolean lock(Transaction thistran)
+    public boolean lock(Transaction thisTran)
     {
-        Transaction writeTran = beginWriteTrans();
-        Table master = getTable(writeTran,"master");
+        Table master = getTable("master",thisTran);
         if(master.isLocked())
         {
-            writeTran.RollBack();
             return false;
         }
         else
         {
             for(String s:tableList.keySet())
             {
-                Table temp = getTable(writeTran,s);
-                temp.lock(writeTran);
-            }
-            try {
-                writeTran.Commit();
-            } catch (IOException e) {
-                e.printStackTrace();
+                Table temp = getTable(s,thisTran);
+                temp.lock(thisTran);
             }
             return true;
         }
     }
 
     //给数据库中全部的表解锁
-    public boolean unLock(Transaction thistran)
+    public boolean unLock(Transaction thisTran)
     {
-        Transaction writeTran = beginWriteTrans();
-        Table master = getTable(writeTran,"master");
+        Table master = getTable("master",thisTran);
         if(master.isLocked())
         {
             for(String s:tableList.keySet())
             {
-                Table temp = getTable(writeTran,s);
-                temp.unLock(writeTran);
-            }
-            try {
-                writeTran.Commit();
-            } catch (IOException e) {
-                e.printStackTrace();
+                Table temp = getTable(s,thisTran);
+                temp.unLock(thisTran);
             }
             return true;
         }
         else
         {
-            writeTran.RollBack();
             return true;
         }
     }
