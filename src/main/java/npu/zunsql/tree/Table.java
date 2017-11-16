@@ -11,8 +11,8 @@ import java.util.List;
  */
 public class Table
 {
-    public final static int LO_LOCKED = 1;
-    public final static int LO_SHARED = 2;
+    private final static int LO_LOCKED = 1;
+    private final static int LO_SHARED = 2;
     private Integer lock;
     private String tableName;
     private Column keyColumn;
@@ -21,10 +21,10 @@ public class Table
 
     // page层的Mgr，用于对Page层进行操作。
     private CacheMgr cacheManager;
-    Page pageOne;
+    private Page pageOne;
 
     // 已经新建好了一个page，只需要填写相关table信息
-    public Table(String name,Column key,List<Column> coList,int pageID,CacheMgr cacheMagr,Transaction thistran)
+    protected Table(String name,Column key,List<Column> coList,int pageID,CacheMgr cacheMagr,Transaction thistran)
     {
         tableName = name;
         keyColumn = key;
@@ -35,27 +35,28 @@ public class Table
         cacheManager = cacheMagr;
 
         pageOne = cacheManager.readPage(thistran.tranNum,pageID);
-        ByteBuffer thisBufer = pageOne.getPageBuffer();
 
+        ByteBuffer thisBufer = pageOne.getPageBuffer();
         // TODO:写入buffer。
 
 
-        writeMyPage(thistran);
+        while(!writeMyPage(thistran));
 
     }
 
     // 已有page，只需要加载其中的信息。
-    public Table(int pageID,CacheMgr cacheMagr,Transaction thistran)
+    protected Table(int pageID,CacheMgr cacheMagr,Transaction thistran)
     {
+        cacheManager = cacheMagr;
         pageOne = cacheManager.readPage(thistran.tranNum,pageID);
-        ByteBuffer thisBufer = pageOne.getPageBuffer();
 
+        ByteBuffer thisBufer = pageOne.getPageBuffer();
         // TODO:读取buffer。
 
     }
 
     // 需要自己新建Page，并填写相关table信息
-    public Table(String name,Column key,List<Column> coList,CacheMgr cacheMagr,Transaction thistran)
+    protected Table(String name,Column key,List<Column> coList,CacheMgr cacheMagr,Transaction thistran)
     {
         tableName = name;
         keyColumn = key;
@@ -75,21 +76,14 @@ public class Table
         // TODO:写入buffer。
 
 
-        writeMyPage(thistran);
+        while(!writeMyPage(thistran)) ;
     }
 
 
     private boolean writeMyPage(Transaction myTran)
     {
         // 写本页
-        if(cacheManager.writePage(myTran.tranNum,pageOne))
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
+        return cacheManager.writePage(myTran.tranNum, pageOne);
     }
 
 
@@ -136,7 +130,7 @@ public class Table
 
         // TODO:更新pageOne。
 
-        writeMyPage(thistran);
+        while(!writeMyPage(thistran));
         return true;
     }
 
@@ -146,7 +140,7 @@ public class Table
 
         // TODO:更新pageOne。
 
-        writeMyPage(thistran);
+        while(!writeMyPage(thistran));
         return true;
     }
 
