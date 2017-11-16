@@ -1,8 +1,17 @@
 import junit.framework.TestCase;
+import npu.zunsql.cache.CacheMgr;
 
 public class CacheMgrTest extends TestCase {
+
+     private CacheMgr cacheMgr;
+     private  int transID;
+
+
     public void setUp() throws Exception {
         super.setUp();
+
+
+
     }
 
     public void tearDown() throws Exception {
