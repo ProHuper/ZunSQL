@@ -4,6 +4,8 @@ import javafx.scene.control.Tab;
 
 import java.util.List;
 
+import static java.lang.Math.abs;
+
 /**
  * Created by Ed on 2017/10/29.
  */
@@ -25,6 +27,10 @@ public class Column
     // column中包含一个columnName。
     private String columnName;
 
+    public String getColumnName() {
+        return columnName;
+    }
+
     public Column(Integer type, String name)
     {
         columnType = type;
@@ -34,12 +40,57 @@ public class Column
     // 判断类型是否匹配。
     // 输入参数：column，另一个列类型。
     // 输出参数，boolean类型，true表示类型匹配，false表示类型不匹配。
-    public boolean IsEqual(Column column)
+    public boolean isMatch(Column column)
     {
         // 若类型相同，名字相同，则表明两个列类型为同一列。
         if(column.columnType == columnType && column.columnName.contentEquals(columnName))
         {
             return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    public boolean isEqual(Cell a,Cell b)
+    {
+        if (a.getColumn().isMatch(this) && b.getColumn().isMatch(this))
+        {
+            if (columnType == CT_INT)
+            {
+                return a.getValue_Int() == b.getValue_Int();
+            }
+            else if (columnType == CT_DOUBLE)
+            {
+                return abs(a.getValue_Double() - b.getValue_Double()) < 0.000001;
+            }
+            else
+            {
+                return a.getValue_String().contentEquals(b.getValue_String());
+            }
+        }
+        else
+        {
+            return false;
+        }
+    }
+    public boolean isBigger(Cell a,Cell b)
+    {
+        if (a.getColumn().isMatch(this) && b.getColumn().isMatch(this))
+        {
+            if (columnType == CT_INT)
+            {
+                return a.getValue_Int() > b.getValue_Int();
+            }
+            else if (columnType == CT_DOUBLE)
+            {
+                return a.getValue_Double() > b.getValue_Double();
+            }
+            else
+            {
+                return a.getValue_String().compareTo(b.getValue_String()) > 0;
+            }
         }
         else
         {

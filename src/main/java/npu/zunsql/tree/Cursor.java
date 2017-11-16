@@ -1,70 +1,68 @@
 package npu.zunsql.tree;
 
-import javafx.scene.control.Tab;
-
-import java.util.List;
-
 /**
  * Created by Ed on 2017/10/28.
  */
 public class Cursor
 {
 
-    private Table aimtable;
+    private Table aimTable;
     private Row thisRow;
 
-    //
-    private Column ThisColumn;
-    private Integer ThisValue;
-    //
-
-    public Cursor(Table thisable)
+    public Cursor(Table thisTable)
     {
-
+        aimTable = thisTable;
+        thisRow = aimTable.getRootNode().getRow();
     }
 
     //boolean ClearCursor()
 
     public boolean MovetoFirst()
     {
+        thisRow = aimTable.getRootNode().getFirstRow();
         return true;
     }
 
     public boolean MovetoLast()
     {
+        thisRow = aimTable.getRootNode().getLastRow();
         return true;
     }
 
     public boolean MovetoNext()
     {
+        thisRow = thisRow.getRightRow();
         return true;
     }
 
     public boolean MovetoPrevious()
     {
+        thisRow = thisRow.getLeftRow();
         return true;
     }
 
     public boolean MovetoUnpacked(Cell keycell)
     {
+        thisRow = aimTable.getRootNode().getSpecifyRow(keycell);
         return true;
     }
 
     public boolean Delete(Transaction thistran)
     {
+        thisRow = thisRow.getRightRow();
+        aimTable.getRootNode().deleteRow(thisRow.getKeyCell());
         return true;
     }
 
-    public boolean Insert(Transaction thistran,Row thisRow)
+    public boolean Insert(Transaction thistran,Row row)
     {
-        return true;
+        thisRow = row;
+        return aimTable.getRootNode().insertRow(thisRow);
     }
 
     public Cell GetKey()
     {
-
-        Cell cell = new Cell(ThisColumn, ThisValue);
-        return cell;
+        return thisRow.getKeyCell();
     }
 
     public Integer GetKeySize()

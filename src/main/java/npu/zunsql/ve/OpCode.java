@@ -5,10 +5,6 @@ public enum OpCode {
     Commit,
     Rollback,
 
-    Integer,
-    String,
-    Float,
-
     CreateDB,
     DropDB,
 
@@ -41,6 +37,10 @@ public enum OpCode {
 
     BeginExpression,
     EndExpression,
+
+    BeginJoin,
+    AddTable,
+    EndJoin,
 
     GT,
     GE,
