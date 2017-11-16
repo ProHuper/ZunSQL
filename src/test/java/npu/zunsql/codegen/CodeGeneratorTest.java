@@ -70,7 +70,10 @@ public class CodeGeneratorTest {
                 CodeGenerator.GenerateByteCode(Arrays.asList(Parser.parse("select * from t where a = 1"))),
                 Arrays.asList(
                         new Instruction(OpCode.Transaction, null, null, null),
-                        new Instruction(OpCode.Select, null, null, "t"),
+                        new Instruction(OpCode.BeginJoin, null, null, null),
+                        new Instruction(OpCode.AddJoin, "t", null, null),
+                        new Instruction(OpCode.EndJoin, "1", null, null),
+                        new Instruction(OpCode.Select, null, null, "1"),
                         new Instruction(OpCode.BeginColSelect, null, null, null),
                         new Instruction(OpCode.AddColSelect, "*", null, null),
                         new Instruction(OpCode.EndColSelect, null, null, null),
@@ -83,10 +86,14 @@ public class CodeGeneratorTest {
                         new Instruction(OpCode.Commit, null, null, null)
                 ));
         assertEquals(
-                CodeGenerator.GenerateByteCode(Arrays.asList(Parser.parse("select a, b from t where a = 1 or 2 > b"))),
+                CodeGenerator.GenerateByteCode(Arrays.asList(Parser.parse("select a, b from t, t1 where a = 1 or 2 > b"))),
                 Arrays.asList(
                         new Instruction(OpCode.Transaction, null, null, null),
-                        new Instruction(OpCode.Select, null, null, "t"),
+                        new Instruction(OpCode.BeginJoin, null, null, null),
+                        new Instruction(OpCode.AddJoin, "t", null, null),
+                        new Instruction(OpCode.AddJoin, "t1", null, null),
+                        new Instruction(OpCode.EndJoin, "1", null, null),
+                        new Instruction(OpCode.Select, null, null, "1"),
                         new Instruction(OpCode.BeginColSelect, null, null, null),
                         new Instruction(OpCode.AddColSelect, "a", null, null),
                         new Instruction(OpCode.AddColSelect, "b", null, null),
