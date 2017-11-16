@@ -59,5 +59,9 @@ public enum OpCode {
     Operator,
     Operand,
 
+    BeginJoin,
+    AddJoin,
+    EndJoin,
+
     Execute,
 }
