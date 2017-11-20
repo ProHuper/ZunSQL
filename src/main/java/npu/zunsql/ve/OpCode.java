@@ -6,10 +6,6 @@ public enum OpCode{
     Commit,
     Rollback,
 
-    Integer,
-    String,
-    Float,
-
     CreateDB,
     DropDB,
 
@@ -22,15 +18,29 @@ public enum OpCode{
     Update,
     Set,
 
+    Add,
+    Sub,
+    Div,
+    Mul,
     And,
     Not,
     Or,
+    GT,
+    GE,
+    LT,
+    LE,
+    EQ,
+    NE,
+    Neg,
 
     AddCol,
 
     BeginPK,
     AddPK,
     EndPK,
+
+    Operand,
+    Operator,
 
     BeginItem,
     AddItemCol,
@@ -41,12 +51,15 @@ public enum OpCode{
     EndColSelect,
 
     BeginFilter,
-    Filter,
     EndFilter,
 
     BeginJoin,
     AddTable,
     EndJoin,
 
-    Execute
+    Execute,
+
+    BeginExpression,
+    EndExpression
+
 }

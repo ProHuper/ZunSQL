@@ -14,16 +14,9 @@
 ——————————————————————————————————————————————————————————————————————————
 opcode                  p1              p2              p3
 ——————————————————————————————————————————————————————————————————————————
-Integer              	                                int_value
-String               	                                string_value
-Float													float_value
-
 Transaction                                               
 Commit                                                    
-Rollback                                                  
-
-CreateDB                                                db_name
-DropDB                                                  db_name
+Rollback
 
 CreateTable                                             table_name
 DropTable                                               table_name
@@ -33,8 +26,7 @@ Delete                                                  table_name
 Select                                                  table_name
 Update                                                  table_name
 
-AddCol                  col_name      col_type        
-
+AddCol                  col_name      col_type
 BeginPK
 AddPK                   col_name        
 EndPK
@@ -44,86 +36,48 @@ AddItemCol              col_name      col_type      value
 EndItem                                                   
 
 BeginFilter                                                 
-Filter                  col_name     comp_type     comp_value
+Operand					col_name	  constant
+Operator				op
 EndFilter                                                 
 
 BeginColSelect                                            
 AddColSelect            col_name                        
 EndColSelect                                              
 
-Set                     col_name                      value
+Set                     col_name
+BeginExpression
+EndExpression
 
-And                                                       
-Or 
-Not
+BeginJoin
+AddTable                table_name
+EndJoin                 table_name
 
 Execute                                                   
 ——————————————————————————————————————————————————————————————————————————
 
+op 支持的字符串：GT、GE、LT、LE、EQ、NE、Mul、Div、Add、Sub、Not、And、Or、Neg
+
 示例（参数位置请参照指令表，空参数连带其位置会被省略）
 
 [sql]
-delete from table_1 where x=10 and y=100
+delete from table_1 where x=c+10*a and y=100
 
 [bytecode]
 Transaction
 Delete table_1
 BeginFilter
-Filter x Equal 10
-And
-Filter y Equal 100
+Operand x
+Operator EQ
+Operand c
+Operator Add
+Operand 10
+Operator Mul
+Operand a
+Operator And
+Operand y
+Operator EQ
+Operand 100
 EndFilter
 Execute
 Commit
 
-
-[sql]
-insert into table_1(x,y,z) values(1,2,ccc)
-
-[bytecode]
-Transaction
-Insert table_1
-BeginItem
-AddItemCol x Integer 1
-AddItemCol y Integer 2
-AddItemCol z String ccc
-EndItem
-Execute
-Commit
-
-[sql]
-select a,b from t1 where x=1 or y>2
-
-[bytecode]
-Transaction
-Select t1
-BeginColSelect
-AddColSelect a
-AddColSelect b
-EndColSelect
-BeginFilter
-Filter x Equal 1
-Or
-Filter y Greater 2
-EndFilter
-Execute
-Commit
-
-[sql]
-create table test (
- x Integer PRIMARY KEY,
- y Integer,
- z String
-)
-
-[bytecode]
-Transaction
-CreateTable test
-AddCol x Integer 
-AddCol y Integer 
-AddCol z String 
-BeginPK 
-AddPK x 
-EndPK 
-Execute
-Commit
