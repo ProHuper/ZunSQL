@@ -78,7 +78,7 @@ public class Cursor
        }
        else if(thisRowPageID.getKeyCell().getType().equals("String"))
        {
-           return thisRowPageID.getKeyCell().getValue_String().length();
+           return thisRowPageID.getKeyCell().getValue().length();
        }
        else
        {

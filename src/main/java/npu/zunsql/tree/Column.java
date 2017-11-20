@@ -17,7 +17,6 @@ public class Column
     // column中包含一个columnName。
     private String columnName;
 
-
     public Column(BasicType type, String name)
     {
         columnType = type;
