@@ -1,5 +1,6 @@
 package npu.zunsql.tree;
 
+
 import javafx.scene.control.Tab;
 
 import java.util.List;
@@ -12,7 +13,7 @@ import static java.lang.Math.abs;
 public class Column
 {
     // column中包含一个columntype。
-    private Integer columnType;
+    private BasicType columnType;
 
     // columntype分为三种：int、double、string。
     // 三种类型分别通过static变量来标定。
