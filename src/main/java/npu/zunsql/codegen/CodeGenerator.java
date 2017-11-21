@@ -9,6 +9,7 @@ import java.util.List;
 
 public class CodeGenerator {
     public static final List<Instruction> GenerateByteCode(List<Relation> statements) {
+        Integer selectTableName = 0;
         List<Instruction> ret = new ArrayList<>();
         Boolean inTransaction = false;
         for (Relation statement : statements) {
@@ -33,8 +34,13 @@ public class CodeGenerator {
             TYPE_SWITCH:
             {
                 if (statement instanceof Select) {
-                    String table = ((Select) statement).from.get(0).tableName.names.get(0);
-                    ret.add(new Instruction(OpCode.Select, null, null, table));
+                    selectTableName += 1;
+                    ret.add(new Instruction(OpCode.BeginJoin, "", "", ""));
+                    for (TableRelation table: ((Select) statement).from) {
+                        ret.add(new Instruction(OpCode.AddJoin, table.tableName.names.get(0), "", ""));
+                    }
+                    ret.add(new Instruction(OpCode.EndJoin, selectTableName.toString(), "", ""));
+                    ret.add(new Instruction(OpCode.Select, null, null, selectTableName.toString()));
                     ret.add(new Instruction(OpCode.BeginColSelect, null, null, null));
                     List<Expression> exprs = ((Select) statement).exprs;
                     for (Expression expr : exprs) {

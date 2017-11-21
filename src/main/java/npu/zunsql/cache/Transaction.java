@@ -12,7 +12,7 @@ public class Transaction
     protected static final String SUFFIX_JOURNAL = "-journal";
 
     //标记是读事务还是写事务，WR是true为写，WR是false为读
-    private boolean WR;
+    protected boolean WR;
 
     protected ReadWriteLock lock;
 
@@ -31,22 +31,25 @@ public class Transaction
     {
         if(this.WR)
         {
+            File journal = new File(Integer.toString(this.transID)+SUFFIX_JOURNAL);
+            try
+            {
+                if(!journal.exists())
+                {
+                    Boolean bool = journal.createNewFile();
+                    System.out.println("File created: "+bool);
+                }
+
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
+
             this.lock.writeLock().lock();
         }
         else {
             this.lock.readLock().lock();
-        }
-        File journal = new File(Integer.toString(this.transID)+SUFFIX_JOURNAL);
-        try
-        {
-            if(!journal.exists())
-            {
-                journal.createNewFile();
-            }
-        }
-        catch (IOException e)
-        {
-            e.printStackTrace();
         }
     }
     public void commit()
