@@ -1,5 +1,7 @@
 package npu.zunsql.tree;
 
+import java.util.List;
+
 /**
  * Created by Ed on 2017/10/28.
  */
@@ -7,102 +9,135 @@ public class Cursor
 {
 
     private Table aimTable;
-    private Row thisRowPageID;
+    private Row thisRow;
 
-    public Cursor(Table thisTable,Transaction thistran)
+    protected Cursor(Table thisTable,Transaction thistran)
     {
         aimTable = thisTable;
-        thisRowPageID = aimTable.getRootNode(thistran).getRow();
-
+        thisRow = aimTable.getRootNode(thistran).getRow();
     }
 
-    //boolean ClearCursor()
+    public BasicType getColumnType(String columnName)
+    {
+        return aimTable.getColumn(columnName).getType();
+    }
+
+    // 获取某一列的单元字符串。
+    // 输入参数：columnName，列名。
+    public String getCell_s(String columnName)
+    {
+        return thisRow.getCell(aimTable.getColumn(columnName).getNumber()).getValue_s();
+    }
+
+    // 获取某一列的单元整形。
+    // 输入参数：columnName，列名。
+    public Integer getCell_i(String columnName)
+    {
+        return thisRow.getCell(aimTable.getColumn(columnName).getNumber()).getValue_i();
+    }
+
+    // 获取某一列的单元双精度。
+    // 输入参数：columnName，列名。
+    public Double getCell_d(String columnName)
+    {
+        return thisRow.getCell(aimTable.getColumn(columnName).getNumber()).getValue_d();
+    }
+
+    // 获取主键单元字符串。
+    public String getKeyCell_s()
+    {
+        return getCell_s(aimTable.getKeyColumn().getName());
+    }
+
+    // 获取主键单元整形。
+    public Integer getKeyCell_i()
+    {
+        return getCell_i(aimTable.getKeyColumn().getName());
+    }
+
+    // 获取主键单元双精度。
+    public Double getKeyCell_d()
+    {
+        return getCell_d(aimTable.getKeyColumn().getName());
+    }
 
     public boolean MovetoFirst(Transaction thistran)
     {
-        thisRowPageID = aimTable.getRootNode(thistran).getFirstRow();
+        thisRow = aimTable.getRootNode(thistran).getFirstRow();
         return true;
     }
 
     public boolean MovetoLast(Transaction thistran)
     {
-        thisRowPageID = aimTable.getRootNode(thistran).getLastRow();
+        thisRow = aimTable.getRootNode(thistran).getLastRow();
         return true;
     }
 
     public boolean MovetoNext(Transaction thistran)
     {
-        thisRowPageID = thisRowPageID.getRightRow();
-        return true;
+        return MovetoUnpacked(thistran,thisRow.nextRowKey.getValue_s());
     }
 
     public boolean MovetoPrevious(Transaction thistran)
     {
-        thisRowPageID = thisRowPageID.getLeftRow();
+        return MovetoUnpacked(thistran,thisRow.lastRowKey.getValue_s());
+    }
+
+    public boolean MovetoUnpacked(Transaction thistran,String key)
+    {
+        Cell keyCell = new Cell(key);
+        thisRow = aimTable.getRootNode(thistran).getSpecifyRow(keyCell);
         return true;
     }
 
-    public boolean MovetoUnpacked(Transaction thistran,Cell keycell)
+    public boolean MovetoUnpacked(Transaction thistran,Integer key)
     {
-        thisRowPageID = aimTable.getRootNode(thistran).getSpecifyRow(keycell);
+        Cell keyCell = new Cell(key.toString());
+        thisRow = aimTable.getRootNode(thistran).getSpecifyRow(keyCell);
+        return true;
+    }
+
+    public boolean MovetoUnpacked(Transaction thistran,Double key)
+    {
+        Cell keyCell = new Cell(key.toString());
+        thisRow = aimTable.getRootNode(thistran).getSpecifyRow(keyCell);
         return true;
     }
 
     public boolean Delete(Transaction thistran)
     {
-        thisRowPageID = thisRowPageID.getRightRow();
-        aimTable.getRootNode(thistran).deleteRow(thisRowPageID.getKeyCell());
+        aimTable.getRootNode(thistran).deleteRow(new Cell(getKeyCell_s()));
+        MovetoUnpacked(thistran,thisRow.nextRowKey.getValue_s());
         return true;
     }
 
-    public boolean Insert(Transaction thistran,Row row)
+    public boolean Insert(Transaction thistran,List<String> stringList)
     {
-        thisRowPageID = row;
-        return aimTable.getRootNode(thistran).insertRow(thisRowPageID);
+        Row row = new Row(stringList);
+        thisRow = row;
+        return aimTable.getRootNode(thistran).insertRow(thisRow);
     }
 
-    public Cell GetKey(Transaction thistran)
+    public Integer GetKeySize()
     {
-        return thisRowPageID.getKeyCell();
+        return getKeyCell_s().length();
     }
 
-    public Integer GetKeySize(Transaction thistran)
+    public List<String> GetData()
     {
-       if(thisRowPageID.getKeyCell().getType().equals("Integer"))
-       {
-           return 4;
-       }
-       else if(thisRowPageID.getKeyCell().getType().equals("Float"))
-       {
-           return 8;
-       }
-       else if(thisRowPageID.getKeyCell().getType().equals("String"))
-       {
-           return thisRowPageID.getKeyCell().getValue().length();
-       }
-       else
-       {
-           return -1;
-       }
+        return thisRow.getStringList();
     }
 
-    public Row GetData(Transaction thistran)
-    {
-        return thisRowPageID;
-    }
-
-    public Integer GetDataSize(Transaction thistran)
+    public Integer GetDataSize()
     {
         return 1;
     }
 
-    public boolean setData(Transaction thistran,Row row)
+    public boolean setData(Transaction thistran,List<String> stringList)
     {
-        thisRowPageID = row;
-        Cursor deleteRow = new Cursor(aimTable,thistran);
-        deleteRow.MovetoUnpacked(thistran,row.getKeyCell());
-        deleteRow.Delete(thistran);
-        Insert(thistran,row);
+        Cell keyCell = new Cell(stringList.get(aimTable.getKeyColumn().getNumber()));
+        aimTable.getRootNode(thistran).deleteRow(keyCell);
+        Insert(thistran,stringList);
         return true;
     }
 }

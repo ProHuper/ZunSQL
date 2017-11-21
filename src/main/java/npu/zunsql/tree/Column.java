@@ -17,19 +17,28 @@ public class Column
     // column中包含一个columnName。
     private String columnName;
 
-    public Column(BasicType type, String name)
+    // column中包含一个columnNumber。
+    private int columnNumber;
+
+    protected Column(BasicType type, String name, Integer number)
     {
         columnType = type;
         columnName = name;
+        columnNumber = number;
     }
 
-    public BasicType getType()
+    protected BasicType getType()
     {
         return columnType;
     }
 
-    public String getName()
+    protected String getName()
     {
         return columnName;
+    }
+
+    protected Integer getNumber()
+    {
+        return columnNumber;
     }
 }

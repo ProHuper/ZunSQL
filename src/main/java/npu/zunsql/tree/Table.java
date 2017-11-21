@@ -156,11 +156,11 @@ public class Table
     {
         return columns;
     }
-    public Column getColumn(String columnName)
+    protected Column getColumn(String columnName)
     {
         for(int i = 0; i < columns.size(); i++)
         {
-            if(columns.get(i).getColumnName().equals(columnName))
+            if(columns.get(i).getName().equals(columnName))
             {
                 return columns.get(i);
             }
