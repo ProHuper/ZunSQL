@@ -5,21 +5,22 @@ public class CacheMgrTest extends TestCase {
 
      private CacheMgr cacheMgr;
      private  int transID;
+     private  String dbname ="zmx";
 
 
     public void setUp() throws Exception {
         super.setUp();
-
-
-
+        cacheMgr = new CacheMgr(dbname);
     }
-
     public void tearDown() throws Exception {
 
     }
 
-
     public void testBeginTransation() throws Exception {
+
+
+
+
 
 
     }
