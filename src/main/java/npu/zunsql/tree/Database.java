@@ -93,7 +93,7 @@ public class Database
         columnList.add(keyColumn);
         columnList.add(valueColumn);
         Transaction masterTran = beginWriteTrans();
-        Table masterTable = createTable("master",keyColumn,columnList,masterTran);
+        TableReader masterTable = createTable("master",keyColumn,columnList,masterTran);
         if(masterTable != null)
         {
             try {
@@ -198,8 +198,14 @@ public class Database
         return new Table(tableName, key, columnList, pageID,cacheManager,thisTran);   //NULL
     }
 
+    //根据传来的表名，主键以及其他的列名来新建一个表放入tableList中
+    public View createView(String tableName, Column key, List<Column> columnList, Transaction thisTran)
+    {
+        return new View();
+    }
+
     //根据传来的表名返回Table表对象
-    public Table getTable(String tableName,Transaction thisTran)
+    public TableReader getTable(String tableName, Transaction thisTran)
     {
         if(tableList.get(tableName) == null)
         {
@@ -207,14 +213,14 @@ public class Database
         }
         else
         {
-            return new Table(tableList.get(tableName),cacheManager,thisTran);
+            return new TableReader(tableList.get(tableName),cacheManager,thisTran);
         }
     }
 
     //给整个数据库中的表全部加锁
     public boolean lock(Transaction thisTran)
     {
-        Table master = getTable("master",thisTran);
+        TableReader master = getTable("master",thisTran);
         if(master.isLocked())
         {
             return false;
@@ -223,7 +229,7 @@ public class Database
         {
             for(String s:tableList.keySet())
             {
-                Table temp = getTable(s,thisTran);
+                TableReader temp = getTable(s,thisTran);
                 temp.lock(thisTran);
             }
             return true;
@@ -233,12 +239,12 @@ public class Database
     //给数据库中全部的表解锁
     public boolean unLock(Transaction thisTran)
     {
-        Table master = getTable("master",thisTran);
+        TableReader master = getTable("master",thisTran);
         if(master.isLocked())
         {
             for(String s:tableList.keySet())
             {
-                Table temp = getTable(s,thisTran);
+                TableReader temp = getTable(s,thisTran);
                 temp.unLock(thisTran);
             }
             return true;

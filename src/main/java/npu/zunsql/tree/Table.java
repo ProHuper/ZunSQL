@@ -4,32 +4,37 @@ import npu.zunsql.cache.CacheMgr;
 import npu.zunsql.cache.Page;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by Ed on 2017/10/28.
- */
-public class Table
+public class Table implements TableReader
 {
-    private final static int LO_LOCKED = 1;
-    private final static int LO_SHARED = 2;
-    private Integer lock;
-    private String tableName;
-    private Column keyColumn;
-    private List<Column> columns;
-    private int rootNodePage;
+    protected List<Column> columns;
+    protected LockType lock;
 
+    protected Column keyColumn;
+
+    protected String tableName;
+
+    protected int rootNodePage;
     // page层的Mgr，用于对Page层进行操作。
     private CacheMgr cacheManager;
     private Page pageOne;
 
-    // 已经新建好了一个page，只需要填写相关table信息
-    protected Table(String name,Column key,List<Column> coList,int pageID,CacheMgr cacheMagr,Transaction thistran)
+    private boolean writeMyPage(Transaction myTran)
     {
+        // 写本页
+        return cacheManager.writePage(myTran.tranNum, pageOne);
+    }
+
+    // 已经新建好了一个page，只需要填写相关table信息
+    protected Table(String name, Column key, List<Column> coList, int pageID, CacheMgr cacheMagr, Transaction thistran)
+    {
+        super();
         tableName = name;
         keyColumn = key;
         columns = coList;
-        lock = LO_SHARED;
+        lock = LockType.Shared;
 
         // TODO: 初始化rootNodePage
         cacheManager = cacheMagr;
@@ -45,8 +50,9 @@ public class Table
     }
 
     // 已有page，只需要加载其中的信息。
-    protected Table(int pageID,CacheMgr cacheMagr,Transaction thistran)
+    protected Table(int pageID, CacheMgr cacheMagr, Transaction thistran)
     {
+        super();
         cacheManager = cacheMagr;
         pageOne = cacheManager.readPage(thistran.tranNum,pageID);
 
@@ -56,12 +62,13 @@ public class Table
     }
 
     // 需要自己新建Page，并填写相关table信息
-    protected Table(String name,Column key,List<Column> coList,CacheMgr cacheMagr,Transaction thistran)
+    protected Table(String name, Column key, List<Column> coList, CacheMgr cacheMagr, Transaction thistran)
     {
+        super();
         tableName = name;
         keyColumn = key;
         columns = coList;
-        lock = LO_SHARED;
+        lock = LockType.Shared;
 
         // TODO: 初始化rootNodePage
         cacheManager = cacheMagr;
@@ -79,43 +86,9 @@ public class Table
         while(!writeMyPage(thistran)) ;
     }
 
-
-    private boolean writeMyPage(Transaction myTran)
+    protected Column getKeyColumn()
     {
-        // 写本页
-        return cacheManager.writePage(myTran.tranNum, pageOne);
-    }
-
-
-    public boolean drop(Transaction thistran)
-    {
-        // TODO: 递归处理page。
-
-        return true;
-    }
-
-    public boolean clear(Transaction thistran)
-    {
-        // TODO：仅保留本Page，处理所有数据。
-        return true;
-    }
-
-
-    public String getTableName()
-    {
-        return tableName;   //NULL
-    }
-
-    public boolean isLocked()
-    {
-        if (lock == LO_LOCKED)
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
+        return keyColumn;
     }
 
     protected Node getRootNode(Transaction thistran)
@@ -124,38 +97,6 @@ public class Table
         return new Node(nodePage);
     }
 
-    public boolean lock(Transaction thistran)
-    {
-        lock = LO_LOCKED;   //NULL
-
-        // TODO:更新pageOne。
-
-        while(!writeMyPage(thistran));
-        return true;
-    }
-
-    public boolean unLock(Transaction thistran)
-    {
-        lock = LO_SHARED;   //NULL
-
-        // TODO:更新pageOne。
-
-        while(!writeMyPage(thistran));
-        return true;
-    }
-
-    public Cursor createCursor(Transaction thistran)
-    {
-        return new Cursor(this,thistran);  //NULL
-    }
-    public Column getKeyColumn()
-    {
-        return keyColumn;
-    }
-    public List<Column> getColumns()
-    {
-        return columns;
-    }
     protected Column getColumn(String columnName)
     {
         for(int i = 0; i < columns.size(); i++)
@@ -167,4 +108,57 @@ public class Table
         }
         return null;
     }
+
+    public Cursor createCursor(Transaction thistran)
+    {
+        return new TableCursor(this,thistran);  //NULL
+    }
+
+    public List<String> getColumns()
+    {
+        List<String> sList = new ArrayList<String>();
+        for(int i = 0; i < columns.size(); i++)
+        {
+            sList.add(columns.get(i).getName());
+        }
+        return sList;
+    }
+
+    public String getTableName()
+    {
+        return tableName;   //NULL
+    }
+
+    public boolean isLocked()
+    {
+        if (lock == LockType.Locked)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    public boolean lock(Transaction thistran)
+    {
+        lock = LockType.Locked;   //NULL
+
+        // TODO:更新pageOne。
+
+        while(!writeMyPage(thistran));
+        return true;
+    }
+
+    public boolean unLock(Transaction thistran)
+    {
+        lock = LockType.Shared;   //NULL
+
+        // TODO:更新pageOne。
+
+        while(!writeMyPage(thistran));
+        return true;
+    }
 }
+

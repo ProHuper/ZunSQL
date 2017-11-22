@@ -2,7 +2,6 @@ package npu.zunsql.ve;
 
 import npu.zunsql.tree.*;
 
-import java.lang.reflect.Array;
 import java.util.*;
 
 public class VirtualMachine
@@ -257,7 +256,7 @@ public class VirtualMachine
 
     private void join(String tableName)
     {
-        Table table = db.getTable(tableName);
+        TableReader table = db.getTable(tableName);
         List<List<String>> resList = joinResult.getRes();
         List<Column> resHead = joinResult.getHeader();
         //TODO,两张表的公共属性。

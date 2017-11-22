@@ -24,7 +24,7 @@ public class SystemManager
         columnList.add(keyColumn);
         columnList.add(valueColumn);
         Transaction masterTran = masterDB.beginWriteTrans();
-        Table masterTable = masterDB.createTable("DBmaster",keyColumn,columnList,masterTran);
+        TableReader masterTable = masterDB.createTable("DBmaster",keyColumn,columnList,masterTran);
         if(masterTable != null)
         {
             try {
@@ -43,7 +43,7 @@ public class SystemManager
     {
         // 读操作
         Transaction loadTran = masterDB.beginReadTrans();
-        Table master = masterDB.getTable("master",loadTran);
+        TableReader master = masterDB.getTable("master",loadTran);
         Cursor masterCursor = master.createCursor(loadTran);
         Column valueColumn = master.getColumn("pageNumber");
         int dBPageID = masterCursor.GetData(loadTran).getCell(valueColumn).getValue_Int();
@@ -66,7 +66,7 @@ public class SystemManager
     {
         // 读操作
         Transaction readTran = masterDB.beginReadTrans();
-        Table master = masterDB.getTable("master",readTran);
+        TableReader master = masterDB.getTable("master",readTran);
         Cursor masterCursor = master.createCursor(readTran);
         if (master != null)
         {
