@@ -1,5 +1,6 @@
 package npu.zunsql.ve;
 
+import com.sun.org.apache.bcel.internal.generic.NEW;
 import npu.zunsql.tree.*;
 
 import java.io.IOException;
@@ -35,6 +36,11 @@ public class VirtualMachine
     private Transaction tran;
     //等待连接的表名
     private List<String> waitingJoin;
+
+    //todo modified
+    private boolean isJoin = false;
+    private List<String> joinItem = null;
+
 
     private boolean suvReadOnly;
 	private boolean recordReadOnly;
@@ -196,6 +202,7 @@ public class VirtualMachine
             case BeginJoin:
                 //接收到join命令，清空临时表
                 joinResult = null;
+                isJoin = true;
                 break;
 
             case AddTable:
@@ -250,7 +257,10 @@ public class VirtualMachine
         else {
             switch (activity){
                 case Select:
-                    select();
+                    if(isJoin)
+                        joinSelect();
+                    else
+                        select();
                     break;
                 case Delete:
                     delete();
@@ -276,7 +286,8 @@ public class VirtualMachine
 
     private QueryResult dropTable(){
         tran=db.beginWriteTrans();
-        if(db.getTable(targetTable,tran).drop(tran)==false){
+        //todo modified.
+        if(db.drop(tran)==false){
             Util.log("删除表失败");
             return new QueryResult(false);
         }
@@ -288,41 +299,54 @@ public class VirtualMachine
 	    //需要开启一个写事务
 	    tran=db.beginWriteTrans();
 
-	    //检索主键
-        int pkType=-1;
+	    //检索主键 unused because it doesn't matter.
+        BasicType pkType;
         for(Column x:columns){
             if(x.getColumnName()==pkName){
                 switch (x.getColumnType()){
                     case "String":
-                        pkType= npu.zunsql.tree.Column.CT_STRING;
+                        pkType = BasicType.String;
                         break;
                     case "Integer":
-                        pkType= npu.zunsql.tree.Column.CT_INT;
+                        pkType = BasicType.Integer;
                         break;
                     case "Float":
-                        pkType= npu.zunsql.tree.Column.CT_DOUBLE;
+                        pkType = BasicType.Float;
                         break;
                 }
             }
         }
-        if(pkType==-1){
-            Util.log("虚拟机未找到创建表的主键");
-        }
 
         //将ve的Column重构为tree的Column
-        List<npu.zunsql.tree.Column> tColumns=new ArrayList<>();
-        for(Column item:columns){
-            int type= npu.zunsql.tree.Column.CT_STRING;
-            if(item.getColumnType()=="Integer"){
-                type= npu.zunsql.tree.Column.CT_INT;
+//        List<npu.zunsql.tree.Column> tColumns=new ArrayList<>();
+//        for(Column item:columns){
+//            BasicType type= BasicType.String;
+//            if(item.getColumnType()=="Integer"){
+//                type= BasicType.Integer;
+//            }
+//            else if(item.getColumnType()=="Float"){
+//                type= BasicType.Float;
+//            }
+//            tColumns.add(new npu.zunsql.tree.Column(type,item.getColumnName()));
+//        }
+
+        List<String> headerName = new ArrayList<>();
+        List<BasicType> headerType = new ArrayList<>();
+        for(Column n: columns){
+            headerName.add(n.ColumnName);
+            switch (n.getColumnType()){
+                case "String":
+                    headerType.add(BasicType.String);
+                    break;
+                case "Float":
+                    headerType.add(BasicType.Float);
+                    break;
+                case "Integer":
+                    headerType.add(BasicType.Integer);
             }
-            else if(item.getColumnType()=="Float"){
-                type= npu.zunsql.tree.Column.CT_DOUBLE;
-            }
-            tColumns.add(new npu.zunsql.tree.Column(type,item.getColumnName()));
         }
 
-        if(null!=db.createTable(targetTable,new npu.zunsql.tree.Column(pkType,pkName),tColumns,tran)){
+        if(null!=db.createTable(targetTable, pkName, headerName, headerType,tran)){
            return new QueryResult(true);
         }
         else{
@@ -340,7 +364,12 @@ public class VirtualMachine
 	    if(filters.size()==0){
 	        return true;
         }
-        UnionOperand ans=eval(filters,p);
+        //todo  modifide.
+        UnionOperand ans;
+        if(isJoin)
+            ans = eval(filters,null);
+        else
+            ans = eval(filters, p);
 	    if(ans.getType()==BasicType.String){
 	        Util.log("where子句的表达式返回值不能为String");
 	        //返回false,此返回值没有意义
@@ -353,43 +382,45 @@ public class VirtualMachine
             return true;
         }
     }
+
     private void select(){
         tran=db.beginReadTrans();
 	    //构造结果集的表头
-	    List<Column> selected=new ArrayList<Column>();
-	    Table t=db.getTable(targetTable,tran);
+	    List<Column> selected=new ArrayList<>();
+	    List<String> t=db.getTable(targetTable,tran).getColumns();
 	    for(String colName:selectedColumns){
-	        Column col=new Column(t.getColumn(colName).getName(),t.getColumn(colName).getType());
+            Column col=new Column(colName);
             selected.add(col);
         }
         result=new QueryResult(selected);
 
-        Cursor p=t.createCursor(tran);
+        Cursor p=db.getTable(targetTable,tran).createCursor(tran);
+        List<String> temp = db.getTable(targetTable,tran).getColumns();
         while(p!=null){
             if(check(p)==true){
                 List<String> ansRecord=new ArrayList<String>();
-                for(String colName:selectedColumns){
-                    ansRecord.add(p.GetData(tran).getCell(colName).getValue_String());
+                for(int i = 0; i < temp.size(); i++){
+                    ansRecord.add(p.getData().get(i));
                 }
                 result.addRecord(ansRecord);
             }
-            p.MovetoNext(tran);
+            p.moveToNext(tran);
         }
     }
     private void delete(){
         tran=db.beginWriteTrans();
-        if(filters.size()==0){
-            db.getTable(targetTable,tran).clear(tran);
-        }
-        else{
-            Cursor p=db.getTable(targetTable,tran).createCursor(tran);
-            while(p!=null){
-                if(check(p)){
-                    p.Delete(tran);
-                }
-                else{
-                    p.MovetoNext(tran);
-                }
+
+        //todo 是否还有全表删除？
+//        if(filters.size()==0){
+//            db.getTable(targetTable,tran).clear(tran);
+//        }
+        Cursor p=db.getTable(targetTable,tran).createCursor(tran);
+        while(p!=null){
+            if(check(p)){
+                p.delete(tran);
+            }
+            else{
+                p.moveToNext(tran);
             }
         }
     }
@@ -398,31 +429,26 @@ public class VirtualMachine
      * 对全表进行更新
      */
     private void update(){
-        Cursor p=db.getTable(targetTable,tran).createCursor(tran);
+        tran = db.beginWriteTrans();
+        Cursor p = db.getTable(targetTable,tran).createCursor(tran);
+        List<String> header = db.getTable(targetTable,tran).getColumns();
         while(p!=null){
+            List<String> row = p.getData();
             if(check(p)){
-                Row record=p.GetData(tran);
+                //Todo modified.
                 for(int i = 0; i< updateAttrs.size(); i++){
-
                     //查询要更新的属性的信息并创建cell对象来执行更新
-                    String name=record.getCell(updateAttrs.get(i)).getColumn().getName();
-                    String type=record.getCell(updateAttrs.get(i)).getColumn().getType();
-                    if(type=="String"){
-                        record.ChangeCell(new Cell(new npu.zunsql.tree.Column(3,name),eval(updateValues.get(i),p).
-                                getValue()));
-                    }
-                    else if(type=="Integer"){
-                        record.ChangeCell(new Cell(new npu.zunsql.tree.Column(1,name),Integer.valueOf(
-                                eval(updateValues.get(i),p).getValue())));
-                    }
-                    else{
-                        record.ChangeCell(new Cell(new npu.zunsql.tree.Column(2,name),Double.valueOf(
-                                eval(updateValues.get(i),p).getValue())));
+                    String name=record.get(i).attrName;
+                    for(String info:header){
+                        if(info.equals(name)){
+                            row.set(i,eval(updateValues.get(i),p).getValue());
+                        }
                     }
                 }
 
             }
-            p.MovetoNext(tran);
+            p.setData(tran,row);
+            p.moveToNext(tran);
         }
     }
 
@@ -431,15 +457,14 @@ public class VirtualMachine
      * 因为上层没有产生default，下层也未提供接口，因此这里每次只能插入一条完整的记录
      */
     private void insert(){
-        List<String> colNames=new ArrayList<>();
+        tran = db.beginWriteTrans();
         List<String> colValues=new ArrayList<>();
 
         for(AttrInstance item:record){
-            colNames.add(item.getAttrName());
             colValues.add(item.getValue());
         }
 
-        db.getTable(targetTable,tran).insert(colNames,colValues);
+        db.getTable(targetTable,tran).createCursor(tran).insert(tran,colValues);
     }
 
     /**
@@ -478,23 +503,37 @@ public class VirtualMachine
      */
     private  UnionOperand eval(List<EvalDiscription> evalDiscriptions,Cursor p){
         Expression exp=new Expression();
+        List<String> info = db.getTable(targetTable,tran).getColumns();
+
         for(int i=0;i<evalDiscriptions.size();i++) {
             if(evalDiscriptions.get(i).cmd==OpCode.Operand){
                 if(evalDiscriptions.get(i).col_name!=null){
-                    Cell c=p.GetData(tran).getCell(evalDiscriptions.get(i).col_name);
-                    switch(c.getColumn().getType()){
-                        case "String":
-                            exp.addOperand(new UnionOperand(BasicType.String,c.getValue_String()));
-                            break;
-                        case "Float":
-                            exp.addOperand(new UnionOperand(BasicType.Float,c.getValue_Double().toString()));
-                            break;
-                        case "Integer":
-                            exp.addOperand(new UnionOperand(BasicType.Integer,c.getValue_Int().toString()));
-                            break;
-                        default:
-                            Util.log("不存在的类型");
+                    if(!isJoin){
+                        for(int j = 0; j < info.size(); i++){
+                            if(info.get(j).equals(evalDiscriptions.get(i).col_name)){
+                                exp.addOperand(new UnionOperand(p.getColumnType(info.get(j)), p.getData().get(j)));
+                            }
+                        }
                     }
+
+                    //todo modified.
+                    else{
+                        int index = joinResult.getRes().indexOf(joinItem);
+                        switch(joinResult.getHeader().get(index).getColumnType()){
+                            case "String":
+                                exp.addOperand(new UnionOperand(BasicType.String,joinItem.get(i)));
+                                break;
+                            case "Float":
+                                exp.addOperand(new UnionOperand(BasicType.Float,joinItem.get(i)));
+                                break;
+                            case "Integer":
+                                exp.addOperand(new UnionOperand(BasicType.Integer,joinItem.get(i)));
+                                break;
+                            default:
+                                Util.log("不存在的类型");
+                        }
+                    }
+
                 }
                 else{
                     String val=evalDiscriptions.get(i).constant;
@@ -515,9 +554,9 @@ public class VirtualMachine
         List<List<String>> resList = joinResult.getRes();
         List<Column> resHead = joinResult.getHeader();
         List<Column> fromTreeHead = new ArrayList<>();
-        table.getColumns().forEach(n -> fromTreeHead.add(new Column(n.getColumnName())));
+        table.getColumns().forEach(n -> fromTreeHead.add(new Column(n)));
 
-        Cursor cursor = new Cursor(table,tran);
+        Cursor cursor = db.getTable(tableName,tran).createCursor(tran);
         JoinMatch matchedJoin = checkUnion(resHead, fromTreeHead);
         QueryResult copy = new QueryResult(matchedJoin.getJoinHead());
 
@@ -525,12 +564,7 @@ public class VirtualMachine
             List<String> tempRes = resList.get(i);
             while(cursor != null)
             {
-                Row row = cursor.GetData(tran);
-                List<Cell> fromTreeCell = row.getCellList();
-                List<String> fromTreeString = new ArrayList<>();
-                for(Cell n: fromTreeCell){
-                    fromTreeString.add(n.getColumn().getColumnName());
-                }
+                List<String> fromTreeString = cursor.getData();
                 List<String> copyTreeString = new ArrayList<>();
                 fromTreeString.forEach(n -> copyTreeString.add(n));
 
@@ -555,7 +589,7 @@ public class VirtualMachine
                     copy.getRes().add(line);
                 }
 
-                cursor.MovetoNext(tran);
+                cursor.moveToNext(tran);
             }
         }
         joinResult = copy;
@@ -583,6 +617,18 @@ public class VirtualMachine
         return new JoinMatch(unionHead, unionUnder);
     }
 
+    //todo modified.
+    public void joinSelect(){
+
+        result=new QueryResult(joinResult.getHeader());
+        for(List<String> info: joinResult.getRes()){
+            joinItem = info;
+            if(check(null)){
+                result.addRecord(info);
+            }
+        }
+
+    }
 
     //这个方法只用于测试自然连接操作。
     public QueryResult forTestJoin(JoinMatch joinMatch, QueryResult input1, QueryResult input2){
@@ -623,10 +669,4 @@ public class VirtualMachine
         return copy;
     }
 
-    private Transaction beginTran(){
-        if(tran==null){
-            tran=beginTran();
-        }
-        return null;
-    }
 }

@@ -1,6 +1,7 @@
 package npu.zunsql.ve;
 
 import javafx.util.Pair;
+import npu.zunsql.tree.BasicType;
 
 import java.util.Stack;
 

@@ -1,5 +1,7 @@
 package npu.zunsql.ve;
 
+import npu.zunsql.tree.BasicType;
+
 public class UnionOperand {
     private String value;
     private BasicType type;

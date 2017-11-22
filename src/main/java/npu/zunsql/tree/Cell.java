@@ -5,84 +5,46 @@ package npu.zunsql.tree;
  */
 public class Cell
 {
-    // cell中包含一个column类型的column用于表示本cell所属的列。
-    private Column thisColumn;
-
-    // cell中包含三种类型的值，int、double、String。
-    // 每个cell有且仅有一个变量的值有效。
-    // 根据Column的type判断cell中的哪个值可用。
-    private Integer value;
-    private Double dValue;
     private String sValue;
 
-    // 根据不同的cell类型提供不同的cell构造方法，主要包括int、double、string。
-    public Cell(Column givenColumn, Integer givenValue)
+    protected Cell(String  givenValue)
     {
-        thisColumn = givenColumn;
-        value = givenValue;
-        dValue = 0.0;
-        sValue = "";
-    }
-
-    public Cell(Column givenColumn, Double givenValue)
-    {
-        thisColumn = givenColumn;
-        dValue = givenValue;
-        value = 0;
-        sValue = "";
-    }
-
-    public Cell(Column givenColumn, String  givenValue)
-    {
-        thisColumn = givenColumn;
         sValue = givenValue;
-        dValue = 0.0;
-        value = 0;
     }
 
-    public String getType()
+    protected Cell(Integer  givenValue)
     {
-        return thisColumn.getType();
+        sValue = givenValue.toString();
     }
 
-    public boolean bigerThan(Cell cell)
+    protected Cell(Double  givenValue)
     {
-        return thisColumn.isBigger(this,cell);
+        sValue = givenValue.toString();
     }
 
-    public boolean equalTo(Cell cell)
+    protected boolean bigerThan(Cell cell)
     {
-        return thisColumn.isEqual(this,cell);
-    }
-    // 返回列类型。
-    // 输入参数：无。
-    // 输出参数：column类型。
-    public Column getColumn()
-    {
-        return thisColumn;
+        return sValue.compareTo(cell.getValue_s()) > 0;
     }
 
-    // 返回本单元的int值。
-    // 输入参数：无。
-    // 输出参数：Integer类型。
-    public Integer getValue_Int()
+    protected boolean equalTo(Cell cell)
     {
-        return value;
-    }
-
-    // 返回本单元的double值。
-    // 输入参数：无。
-    // 输出参数：Double类型。
-    public Double getValue_Double()
-    {
-        return dValue;
+        return sValue.contentEquals(cell.getValue_s());
     }
 
     // 返回本单元的String值
     // 输入参数：无
     // 输出参数：String类型。
-    public String getValue_String()
+    protected String getValue_s()
     {
         return sValue;
+    }
+    protected Integer getValue_i()
+    {
+        return Integer.valueOf(sValue);
+    }
+    protected Double getValue_d()
+    {
+        return Double.valueOf(sValue);
     }
 }
