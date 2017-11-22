@@ -35,14 +35,21 @@ public class Database
     {
         dBName = name;
         cacheManager = new CacheMgr(dBName);
-        if()
-        {
 
+        // TODO:根据CacheMgr得到本db是否存在的信息
+        boolean dbExist = false;
+        if(dbExist)
+        {
+            Transaction initTran = beginReadTrans();
+            pageOne = cacheManager.readPage(initTran.tranNum,0);
+            initTran.Commit();
+            master = getMaster();
         }
-        Transaction initTran = beginReadTrans();
-        pageOne = cacheManager.readPage(initTran.tranNum,0);
-        initTran.Commit();
-        master = getMaster();
+        else
+        {
+            addMasterTable();
+        }
+
         if (newMyPage())
         {
             if(addMasterTable())
@@ -57,7 +64,8 @@ public class Database
     }
 
 
-    private boolean addMasterTable() throws IOException {
+    private boolean addMasterTable() throws IOException
+    {
         // 添加master table
         Column keyColumn = new Column(BasicType.String,"tableName",0);
         Column valueColumn = new Column(BasicType.Integer,"pageNumber",1);
@@ -65,7 +73,7 @@ public class Database
         columnList.add(keyColumn);
         columnList.add(valueColumn);
         Transaction masterTran = beginWriteTrans();
-        TableReader masterTable = createTable("master",keyColumn,columnList,masterTran);
+        Table masterTable = createTable("master",keyColumn,columnList,masterTran);
         if(masterTable != null)
         {
             masterTran.Commit();
@@ -129,7 +137,7 @@ public class Database
         }
     }
 
-    public boolean drop(Transaction thisTran)
+    public boolean dropTable(Transaction thisTran)
     {
         // TODO：递归释放此Page
 
@@ -149,15 +157,21 @@ public class Database
     }
 
     //根据传来的表名，主键以及其他的列名来新建一个表放入tableList中
-    public Table createTable(String tableName, Column key, List<Column> columnList, Transaction thisTran)
+    public Table createTable(String tableName, String key, List<String> sList, Transaction thisTran)
     {
-        // TODO: 此处存在问题，1024没有意义。
-        ByteBuffer tempBuffer = ByteBuffer.allocate(1024);
-        // TODO：QUE:不需要事务编号吗？
+        ByteBuffer tempBuffer = ByteBuffer.allocate(Page.PAGE_SIZE);
         Page tablePage = new Page(tempBuffer);
-        int pageID = tablePage.getPageID();
-        tableList.put(tableName,pageID);
-        return new Table(tableName, key, columnList, pageID,cacheManager,thisTran);   //NULL
+        cacheManager.writePage(thisTran.tranNum,tablePage);
+        Integer pageID = tablePage.getPageID();
+
+        List<String> masterRow_s = new ArrayList<String>();
+        masterRow_s.add(tableName);
+        masterRow_s.add(pageID.toString());
+
+        Cursor masterCursor = master.createCursor(thisTran);
+        masterCursor.insert(thisTran,masterRow_s);
+
+        return new Table(tableName, key, masterRow_s, pageID,cacheManager,thisTran);   //NULL
     }
 
     //根据传来的表名，主键以及其他的列名来新建一个表放入tableList中
