@@ -3,12 +3,10 @@ package npu.zunsql.tree;
 import npu.zunsql.cache.Page;
 import  npu.zunsql.cache.CacheMgr;
 
-import java.io.IOException;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Created by Ed on 2017/10/29.
@@ -18,6 +16,8 @@ public class Database
     //表示dataBase的名字
     private String dBName;
 
+    Table master;
+
     // Mgr页放在第一页
     // 内容包括：database的对应页
     private Page pageOne;
@@ -25,51 +25,24 @@ public class Database
     // page层的Mgr，用于对Page层进行操作。
     private CacheMgr cacheManager;
 
-    // 数据库中的table集合，根据表名，映射页码
-    private Map<String,Integer> tableList = new HashMap<String, Integer>();
-
-    // 已经新建了一个Page，只需要进行相关Page写操作。
-    protected Database(String name,Page newPage)
+    private Table getMaster()
     {
-        dBName = name;
-        cacheManager = new CacheMgr(dBName);
-        pageOne = newPage;
-
-        addMasterTable();
-
-        ByteBuffer thisBufer = pageOne.getPageBuffer();
-        // TODO: 修改thisBufer.
-
-
-        writeMyPage();
-    }
-
-    // 存在一个db，只需要读取即可。
-    protected Database(String name,int pageID)
-    {
-        dBName = name;
-        cacheManager = new CacheMgr(dBName);
-        if(!loadMyPage(pageID))
-        {
-            if (newMyPage())
-            {
-                if(addMasterTable())
-                {
-                    ByteBuffer thisBufer = pageOne.getPageBuffer();
-                    // TODO: 修改thisBufer.
-
-
-                    writeMyPage();
-                }
-            }
-        }
+        return null;
     }
 
     // 首先新建一个Page，然后进行相关Page写操作。
-    protected Database(String name)
+    protected Database(String name) throws IOException
     {
         dBName = name;
         cacheManager = new CacheMgr(dBName);
+        if()
+        {
+
+        }
+        Transaction initTran = beginReadTrans();
+        pageOne = cacheManager.readPage(initTran.tranNum,0);
+        initTran.Commit();
+        master = getMaster();
         if (newMyPage())
         {
             if(addMasterTable())
@@ -84,11 +57,10 @@ public class Database
     }
 
 
-    private boolean addMasterTable()
-    {
+    private boolean addMasterTable() throws IOException {
         // 添加master table
-        Column keyColumn = new Column(3,"tableName");
-        Column valueColumn = new Column(1,"pageNumber");
+        Column keyColumn = new Column(BasicType.String,"tableName",0);
+        Column valueColumn = new Column(BasicType.Integer,"pageNumber",1);
         List<Column> columnList = new ArrayList<>();
         columnList.add(keyColumn);
         columnList.add(valueColumn);
@@ -96,11 +68,7 @@ public class Database
         TableReader masterTable = createTable("master",keyColumn,columnList,masterTran);
         if(masterTable != null)
         {
-            try {
-                masterTran.Commit();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            masterTran.Commit();
             return true;
         }
         else
@@ -122,8 +90,7 @@ public class Database
         return pageOne != null;
     }
 
-    private boolean loadMyPage(int pageID)
-    {
+    private boolean loadMyPage(int pageID) throws IOException {
         Transaction readTran = beginReadTrans();
         pageOne = cacheManager.readPage(readTran.tranNum,pageID);
 
@@ -147,17 +114,12 @@ public class Database
         }
     }
 
-    private boolean writeMyPage()
-    {
+    private boolean writeMyPage() throws IOException {
         // 写本页
         Transaction masterTran = beginWriteTrans();
         if(cacheManager.writePage(masterTran.tranNum,pageOne))
         {
-            try {
-                masterTran.Commit();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            masterTran.Commit();
             return true;
         }
         else
@@ -205,7 +167,7 @@ public class Database
     }
 
     //根据传来的表名返回Table表对象
-    public TableReader getTable(String tableName, Transaction thisTran)
+    public Table getTable(String tableName, Transaction thisTran)
     {
         if(tableList.get(tableName) == null)
         {
@@ -213,14 +175,14 @@ public class Database
         }
         else
         {
-            return new TableReader(tableList.get(tableName),cacheManager,thisTran);
+            return new Table(tableList.get(tableName),cacheManager,thisTran);
         }
     }
 
     //给整个数据库中的表全部加锁
     public boolean lock(Transaction thisTran)
     {
-        TableReader master = getTable("master",thisTran);
+        Table master = getTable("master",thisTran);
         if(master.isLocked())
         {
             return false;
@@ -229,7 +191,7 @@ public class Database
         {
             for(String s:tableList.keySet())
             {
-                TableReader temp = getTable(s,thisTran);
+                Table temp = getTable(s,thisTran);
                 temp.lock(thisTran);
             }
             return true;
@@ -239,12 +201,12 @@ public class Database
     //给数据库中全部的表解锁
     public boolean unLock(Transaction thisTran)
     {
-        TableReader master = getTable("master",thisTran);
+        Table master = getTable("master",thisTran);
         if(master.isLocked())
         {
             for(String s:tableList.keySet())
             {
-                TableReader temp = getTable(s,thisTran);
+                Table temp = getTable(s,thisTran);
                 temp.unLock(thisTran);
             }
             return true;

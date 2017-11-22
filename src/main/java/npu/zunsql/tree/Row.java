@@ -13,9 +13,9 @@ public class Row
     // 每个Row中包含一个所有列
     protected List<Cell> cellList = new ArrayList<Cell>();
 
-    Cell nextRowKey;
+    protected Cell nextRowKey;
 
-    Cell lastRowKey;
+    protected Cell lastRowKey;
 
     protected Row(List<String> SList)
     {

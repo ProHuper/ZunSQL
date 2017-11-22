@@ -9,16 +9,18 @@ import java.util.List;
 
 public class Table implements TableReader
 {
-    protected List<Column> columns;
-    protected LockType lock;
-
-    protected Column keyColumn;
-
     protected String tableName;
 
+    protected Column keyColumn;
+    protected List<Column> columns;
+
+    protected LockType lock;
+
     protected int rootNodePage;
+
     // page层的Mgr，用于对Page层进行操作。
     private CacheMgr cacheManager;
+
     private Page pageOne;
 
     private boolean writeMyPage(Transaction myTran)
@@ -84,6 +86,11 @@ public class Table implements TableReader
 
 
         while(!writeMyPage(thistran)) ;
+    }
+
+    protected Integer getTablePageID()
+    {
+        return pageOne.getPageID();
     }
 
     protected Column getKeyColumn()
