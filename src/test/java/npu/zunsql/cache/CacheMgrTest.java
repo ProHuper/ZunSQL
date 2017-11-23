@@ -27,7 +27,7 @@ public class CacheMgrTest extends TestCase {
          assertEquals(false,cacheMgr.lock.readLock().tryLock());
          cacheMgr.lock.readLock().unlock();
          //写事务
-        　transID = new cacheMgr.beginTransation("w");
+        // transID = new cacheMgr.beginTransation("w");
           assertEquals(false,cacheMgr.lock.writeLock().tryLock());
     }
 
@@ -48,7 +48,7 @@ public class CacheMgrTest extends TestCase {
         transID = new cacheMgr.beginTransation("r");
         assertEquals(false,cacheMgr.transMgr.containsKey(transID));
 
-　　　　　//写事务
+        //写事务
         transID = new cacheMgr.beginTransation("w");
         assertEquals(false,cacheMgr.transMgr.containsKey(transID));
 
