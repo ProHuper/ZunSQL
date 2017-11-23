@@ -7,7 +7,9 @@ import java.util.List;
  */
 public interface TableReader
 {
-    public abstract List<String> getColumns();
+    public abstract List<String> getColumnsName();
+
+    public abstract List<BasicType> getColumnsType();
 
     public abstract Cursor createCursor(Transaction thistran);
 }

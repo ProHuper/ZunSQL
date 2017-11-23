@@ -29,63 +29,17 @@ public class Table implements TableReader
         return cacheManager.writePage(myTran.tranNum, pageOne);
     }
 
-    // 已经新建好了一个page，只需要填写相关table信息
-    protected Table(String name, Column key, List<Column> coList, int pageID, CacheMgr cacheMagr, Transaction thistran)
-    {
-        super();
-        tableName = name;
-        keyColumn = key;
-        columns = coList;
-        lock = LockType.Shared;
-
-        // TODO: 初始化rootNodePage
-        cacheManager = cacheMagr;
-
-        pageOne = cacheManager.readPage(thistran.tranNum,pageID);
-
-        ByteBuffer thisBufer = pageOne.getPageBuffer();
-        // TODO:写入buffer。
-
-
-        while(!writeMyPage(thistran));
-
-    }
-
     // 已有page，只需要加载其中的信息。
-    protected Table(int pageID, CacheMgr cacheMagr, Transaction thistran)
+    // 新建table的工作在database中已经完成，因此，可能加载出只有表头的空表。
+    protected Table(int pageID, CacheMgr cacheManager, Transaction thisTran)
     {
         super();
-        cacheManager = cacheMagr;
-        pageOne = cacheManager.readPage(thistran.tranNum,pageID);
+        this.cacheManager = cacheManager;
+        pageOne = this.cacheManager.readPage(thisTran.tranNum,pageID);
 
         ByteBuffer thisBufer = pageOne.getPageBuffer();
-        // TODO:读取buffer。
+        // TODO:读取Buffer。
 
-    }
-
-    // 需要自己新建Page，并填写相关table信息
-    protected Table(String name, Column key, List<Column> coList, CacheMgr cacheMagr, Transaction thistran)
-    {
-        super();
-        tableName = name;
-        keyColumn = key;
-        columns = coList;
-        lock = LockType.Shared;
-
-        // TODO: 初始化rootNodePage
-        cacheManager = cacheMagr;
-
-        // TODO: 此处存在问题，1024没有意义。
-        ByteBuffer tempBuffer = ByteBuffer.allocate(1024);
-
-        // TODO：QUE:不需要事务编号吗？
-        pageOne = new Page(tempBuffer);
-
-
-        // TODO:写入buffer。
-
-
-        while(!writeMyPage(thistran)) ;
     }
 
     protected Integer getTablePageID()
@@ -98,10 +52,9 @@ public class Table implements TableReader
         return keyColumn;
     }
 
-    protected Node getRootNode(Transaction thistran)
+    protected Node getRootNode(Transaction thisTran)
     {
-        Page nodePage = cacheManager.readPage(thistran.tranNum,rootNodePage);
-        return new Node(nodePage);
+        return new Node(rootNodePage, cacheManager, thisTran);
     }
 
     protected Column getColumn(String columnName)
@@ -121,12 +74,22 @@ public class Table implements TableReader
         return new TableCursor(this,thistran);  //NULL
     }
 
-    public List<String> getColumns()
+    public List<String> getColumnsName()
     {
         List<String> sList = new ArrayList<String>();
         for(int i = 0; i < columns.size(); i++)
         {
             sList.add(columns.get(i).getName());
+        }
+        return sList;
+    }
+
+    public List<BasicType> getColumnsType()
+    {
+        List<BasicType> sList = new ArrayList<BasicType>();
+        for(int i = 0; i < columns.size(); i++)
+        {
+            sList.add(columns.get(i).getType());
         }
         return sList;
     }

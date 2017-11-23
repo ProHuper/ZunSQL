@@ -135,27 +135,35 @@ class TableCursor extends Cursor
     // 游标移至首条
     public boolean moveToFirst(Transaction thisTran)
     {
-        thisRow = aimTable.getRootNode(thisTran).getFirstRow();
+        thisRow = aimTable.getRootNode(thisTran).getFirstRow(thisTran);
         return true;
     }
 
     // 游标移至末尾
     public boolean moveToLast(Transaction thisTran)
     {
-        thisRow = aimTable.getRootNode(thisTran).getLastRow();
+        thisRow = aimTable.getRootNode(thisTran).getLastRow(thisTran);
         return true;
     }
 
     // 游标后移一条
     public boolean moveToNext(Transaction thisTran)
     {
-        return moveToUnpacked(thisTran,thisRow.nextRowKey.getValue_s());
+        if(thisRow.rightRowKey == null)
+        {
+            return false;
+        }
+        return moveToUnpacked(thisTran,thisRow.rightRowKey.getValue_s());
     }
 
     // 游标前移一条
     public boolean moveToPrevious(Transaction thisTran)
     {
-        return moveToUnpacked(thisTran,thisRow.lastRowKey.getValue_s());
+        if(thisRow.leftRowKey == null)
+        {
+            return false;
+        }
+        return moveToUnpacked(thisTran,thisRow.leftRowKey.getValue_s());
     }
 
     // 游标移至指定位
@@ -189,7 +197,7 @@ class TableCursor extends Cursor
     public boolean delete(Transaction thisTran)
     {
         aimTable.getRootNode(thisTran).deleteRow(new Cell(getKeyCell_s()));
-        moveToUnpacked(thisTran,thisRow.nextRowKey.getValue_s());
+        moveToUnpacked(thisTran,thisRow.rightRowKey.getValue_s());
         return true;
     }
 
@@ -221,9 +229,11 @@ class ViewCursor extends Cursor
     protected View aimView;
     protected int RowID;
 
-    protected ViewCursor()
+    protected ViewCursor(View aView)
     {
         super();
+        aimView = aView;
+        RowID = 0;
     }
 
     // 获取列类型

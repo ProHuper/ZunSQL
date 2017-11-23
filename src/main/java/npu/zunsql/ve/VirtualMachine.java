@@ -261,7 +261,7 @@ public class VirtualMachine
         List<Column> resHead = joinResult.getHeader();
         //TODO,两张表的公共属性。
         List<Column> fromTreeHead = new ArrayList<>();
-        table.getColumns().forEach(n -> fromTreeHead.add(new Column(n.getColumnName())));
+        table.getColumnsName().forEach(n -> fromTreeHead.add(new Column(n.getColumnName())));
 
         Cursor cursor = new Cursor(table);
         JoinMatch matchedJoin = checkUnion(resHead, fromTreeHead);

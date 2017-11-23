@@ -16,19 +16,10 @@ public class Database
     //表示dataBase的名字
     private String dBName;
 
-    Table master;
-
-    // Mgr页放在第一页
-    // 内容包括：database的对应页
-    private Page pageOne;
+    private Table master;
 
     // page层的Mgr，用于对Page层进行操作。
     private CacheMgr cacheManager;
-
-    private Table getMaster()
-    {
-        return null;
-    }
 
     // 首先新建一个Page，然后进行相关Page写操作。
     protected Database(String name) throws IOException
@@ -41,103 +32,42 @@ public class Database
         if(dbExist)
         {
             Transaction initTran = beginReadTrans();
-            pageOne = cacheManager.readPage(initTran.tranNum,0);
+            //TODO:从page[0]解析master。
+            master = null;
             initTran.Commit();
-            master = getMaster();
         }
         else
         {
-            addMasterTable();
-        }
-
-        if (newMyPage())
-        {
-            if(addMasterTable())
-            {
-                ByteBuffer thisBufer = pageOne.getPageBuffer();
-                // TODO: 修改thisBufer.
-
-
-                while(!writeMyPage());
-            }
+            Transaction initTran = beginWriteTrans();
+            addMaster(initTran);
+            initTran.Commit();
         }
     }
 
 
-    private boolean addMasterTable() throws IOException
+    private boolean addMaster(Transaction initTran) throws IOException
     {
         // 添加master table
         Column keyColumn = new Column(BasicType.String,"tableName",0);
         Column valueColumn = new Column(BasicType.Integer,"pageNumber",1);
-        List<Column> columnList = new ArrayList<>();
-        columnList.add(keyColumn);
-        columnList.add(valueColumn);
-        Transaction masterTran = beginWriteTrans();
-        Table masterTable = createTable("master",keyColumn,columnList,masterTran);
-        if(masterTable != null)
-        {
-            masterTran.Commit();
-            return true;
-        }
-        else
-        {
-            masterTran.RollBack();
-            return false;
-        }
+        List<String> sList = new ArrayList<String>();
+        List<BasicType> tList = new ArrayList<BasicType>();
+        sList.add("tableName");
+        sList.add("pageNumber");
+        tList.add(BasicType.String);
+        tList.add(BasicType.Integer);
+        master = createTable("master","tableName",sList,tList,initTran);
+        return true;
     }
 
-    // 新建一个Page用于存储新的DB
-    private boolean newMyPage()
+    public boolean dropTable(String tableName,Transaction thisTran)
     {
-        // TODO: 此处存在问题，1024没有意义。
-        ByteBuffer tempBuffer = ByteBuffer.allocate(1024);
+        // TODO：递归释放此Page
 
-        // TODO：QUE:不需要事务编号吗？
-        pageOne = new Page(tempBuffer);
-
-        return pageOne != null;
+        return true;
     }
 
-    private boolean loadMyPage(int pageID) throws IOException {
-        Transaction readTran = beginReadTrans();
-        pageOne = cacheManager.readPage(readTran.tranNum,pageID);
-
-        ByteBuffer thisBufer = pageOne.getPageBuffer();
-        // TODO: 读取thisBuffer.
-
-
-        if (pageOne != null)
-        {
-            try {
-                readTran.Commit();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            return true;
-        }
-        else
-        {
-            readTran.RollBack();
-            return false;
-        }
-    }
-
-    private boolean writeMyPage() throws IOException {
-        // 写本页
-        Transaction masterTran = beginWriteTrans();
-        if(cacheManager.writePage(masterTran.tranNum,pageOne))
-        {
-            masterTran.Commit();
-            return true;
-        }
-        else
-        {
-            masterTran.RollBack();
-            return false;
-        }
-    }
-
-    public boolean dropTable(Transaction thisTran)
+    public boolean dropTable(Table table,Transaction thisTran)
     {
         // TODO：递归释放此Page
 
@@ -156,10 +86,11 @@ public class Database
         return new WriteTran(cacheManager.beginTransation("w"),cacheManager);
     }
 
-    //根据传来的表名，主键以及其他的列名来新建一个表放入tableList中
-    public Table createTable(String tableName, String key, List<String> sList, Transaction thisTran)
+    //根据传来的表名，主键以及其他的列名来新建一个表
+    public Table createTable(String tableName, String keyName, List<String> columnNameList,List<BasicType> tList, Transaction thisTran)
     {
         ByteBuffer tempBuffer = ByteBuffer.allocate(Page.PAGE_SIZE);
+        // TODO:将表头信息和首节点信息存入ByteBuffer中
         Page tablePage = new Page(tempBuffer);
         cacheManager.writePage(thisTran.tranNum,tablePage);
         Integer pageID = tablePage.getPageID();
@@ -171,43 +102,39 @@ public class Database
         Cursor masterCursor = master.createCursor(thisTran);
         masterCursor.insert(thisTran,masterRow_s);
 
-        return new Table(tableName, key, masterRow_s, pageID,cacheManager,thisTran);   //NULL
+        return new Table(pageID,cacheManager,thisTran);   //NULL
     }
 
     //根据传来的表名，主键以及其他的列名来新建一个表放入tableList中
-    public View createView(String tableName, Column key, List<Column> columnList, Transaction thisTran)
+    public View createView(List<String> sList, List<BasicType> tList, List<List<String>> rowStringList, Transaction thisTran)
     {
-        return new View();
+        return new View(sList,tList,rowStringList);
     }
 
     //根据传来的表名返回Table表对象
     public Table getTable(String tableName, Transaction thisTran)
     {
-        if(tableList.get(tableName) == null)
-        {
-            return null;
-        }
-        else
-        {
-            return new Table(tableList.get(tableName),cacheManager,thisTran);
-        }
+        Cursor masterCursor = master.createCursor(thisTran);
+        masterCursor.moveToUnpacked(thisTran,tableName);
+        return new Table(masterCursor.getCell_i("pageNumber"),cacheManager,thisTran);
     }
 
     //给整个数据库中的表全部加锁
     public boolean lock(Transaction thisTran)
     {
-        Table master = getTable("master",thisTran);
         if(master.isLocked())
         {
             return false;
         }
         else
         {
-            for(String s:tableList.keySet())
+            master.lock(thisTran);
+            Cursor masterCursor = master.createCursor(thisTran);
+            do
             {
-                Table temp = getTable(s,thisTran);
+                Table temp = new Table(masterCursor.getCell_i("pageNumber"),cacheManager,thisTran);
                 temp.lock(thisTran);
-            }
+            }while(masterCursor.moveToNext(thisTran));
             return true;
         }
     }
@@ -215,14 +142,15 @@ public class Database
     //给数据库中全部的表解锁
     public boolean unLock(Transaction thisTran)
     {
-        Table master = getTable("master",thisTran);
         if(master.isLocked())
         {
-            for(String s:tableList.keySet())
+            master.unLock(thisTran);
+            Cursor masterCursor = master.createCursor(thisTran);
+            do
             {
-                Table temp = getTable(s,thisTran);
+                Table temp = new Table(masterCursor.getCell_i("pageNumber"),cacheManager,thisTran);
                 temp.unLock(thisTran);
-            }
+            }while(masterCursor.moveToNext(thisTran));
             return true;
         }
         else
