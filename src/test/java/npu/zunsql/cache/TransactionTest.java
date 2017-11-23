@@ -36,27 +36,27 @@ public class TransactionTest extends TestCase {
 
         //测试读事务
         readTrans.commit();
-        journal = new File(Integer.toString(readTrans.transID)+readTrans.SUFFIX_JOURNAL);
+        File journal = new File(Integer.toString(readTrans.transID)+readTrans.SUFFIX_JOURNAL);
         assertEquals(false, journal.exists());
-        assertEquals(true, readTrans.lock.writelock().tryLock());
+        assertEquals(true, readTrans.lock.writeLock().tryLock());
         //测试写事务
         writeTrans.commit();
         journal = new File(Integer.toString(writeTrans.transID)+writeTrans.SUFFIX_JOURNAL);
         assertEquals(false, journal.exists());
-        assertEquals(true, writeTrans.lock.writelock().tryLock());
+        assertEquals(true, writeTrans.lock.writeLock().tryLock());
     }
 
     public void testRollback() throws Exception {
         //测试读事务
         readTrans.rollback();
-        journal = new File(Integer.toString(readTrans.transID)+readTrans.SUFFIX_JOURNAL);
+        File journal = new File(Integer.toString(readTrans.transID)+readTrans.SUFFIX_JOURNAL);
         assertEquals(false, journal.exists());
-        assertEquals(true, readTrans.lock.writelock().tryLock());
+        assertEquals(true, readTrans.lock.writeLock().tryLock());
         //测试写事务
         writeTrans.rollback();
         journal = new File(Integer.toString(writeTrans.transID)+writeTrans.SUFFIX_JOURNAL);
         assertEquals(false, journal.exists());
-        assertEquals(true, writeTrans.lock.writelock().tryLock());
+        assertEquals(true, writeTrans.lock.writeLock().tryLock());
     }
 
 }

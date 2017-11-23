@@ -27,8 +27,8 @@ public class CacheMgrTest extends TestCase {
          assertEquals(false,cacheMgr.lock.readLock().tryLock());
          cacheMgr.lock.readLock().unlock();
          //写事务
-        　transID = new cacheMgr.beginTransation("w");
-          assertEquals(false,cacheMgr.lock.writeLock().tryLock());
+		 transID = new cacheMgr.beginTransation("w");
+		 assertEquals(false,cacheMgr.lock.writeLock().tryLock());
     }
 
     public void testCommitTransation() throws Exception {
@@ -47,9 +47,8 @@ public class CacheMgrTest extends TestCase {
          //读事务
         transID = new cacheMgr.beginTransation("r");
         assertEquals(false,cacheMgr.transMgr.containsKey(transID));
-
-　　　　　//写事务
-        transID = new cacheMgr.beginTransation("w");
+		//写事务
+		transID = new cacheMgr.beginTransation("w");
         assertEquals(false,cacheMgr.transMgr.containsKey(transID));
 
 
