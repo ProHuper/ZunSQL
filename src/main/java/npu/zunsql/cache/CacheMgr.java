@@ -219,8 +219,10 @@ public class CacheMgr
      *
      * 释放对应的锁，cache不做任何操作
      */
+
     public boolean rollbackTransation(int transID)  {
         Transaction trans = transMgr.get(transID);
+
 
         if(trans.WR)
         {
@@ -270,6 +272,10 @@ public class CacheMgr
         this.transMgr.remove(transID);
         return true;
     }
+
+
+
+
 
     /**事务transID读取pageID对应的页，返回页的副本
      * 
@@ -331,9 +337,9 @@ public class CacheMgr
     {
         List<Page> writePageList= transOnPage.get(transID);
         writePageList.add(tempBuffer);
-
         return true;
     }
+
 
     /**将指定的某一页写回至内存
      *
@@ -349,10 +355,8 @@ public class CacheMgr
             }
             RandomAccessFile fin = new RandomAccessFile(file, "rw");
             fc = fin.getChannel();
-
             //独占锁
             FileLock lock = fc.lock();
-
             tempPage.pageBuffer.flip();
             fc.write(tempPage.pageBuffer, tempPage.pageID*(Page.PAGE_SIZE+CacheMgr.FILEHEADERSIZE+CacheMgr.UNUSEDLISTSIZE));
             lock.release();
@@ -382,6 +386,7 @@ public class CacheMgr
     {
         Page.unusedID.add(pageID);
     }
+
 
     /**读取文件中的指定PageID页
      *
