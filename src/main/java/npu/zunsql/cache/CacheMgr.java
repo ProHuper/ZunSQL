@@ -14,6 +14,8 @@ public class CacheMgr
 {
     protected static final int CacheCapacity = 10;
     protected String dbName = null;
+    protected static final int FILEHEADERSIZE = 1024;
+    protected static final int UNUSEDLISTSIZE = 1024;
 
 
     //缓存页链表，按照LRU策略组织顺序
@@ -27,7 +29,6 @@ public class CacheMgr
     private ReadWriteLock lock;
 
 
-
     public CacheMgr(String dbName)
     {
         this.dbName       = dbName;
@@ -38,6 +39,100 @@ public class CacheMgr
 
         this.transOnPage  = new HashMap<Integer, List<Page>>();
         this.lock = new ReentrantReadWriteLock();
+    }
+
+    public boolean isNew()
+    {
+        File db_file = new File(this.dbName);
+        FileChannel fc = null;
+        if(db_file.exists())
+        {
+            RandomAccessFile fin = null;
+            try {
+                fin = new RandomAccessFile(db_file, "rw");
+                fc = fin.getChannel();
+                ByteBuffer fileHeader = ByteBuffer.allocate(this.FILEHEADERSIZE);
+                fc.read(fileHeader, 0);
+                int version =  fileHeader.getInt();
+                int magicNum =  fileHeader.getInt();
+                if(version == 1 && magicNum == 314159)
+                {
+                    ByteBuffer unusedListBuffer = ByteBuffer.allocate(this.UNUSEDLISTSIZE);
+                    fc.read(unusedListBuffer, this.FILEHEADERSIZE);
+                    int usedListNum = unusedListBuffer.getInt();
+                    for(int i = 0; i < usedListNum; i++)
+                    {
+                        Page.unusedID.add(unusedListBuffer.getInt());
+                    }
+                    return true;
+                }
+                else
+                {
+                    db_file.delete();
+                    db_file.createNewFile();
+                    fin = new RandomAccessFile(db_file, "rw");
+                    fc = fin.getChannel();
+                    fileHeader.flip();
+                    fileHeader.putInt(1);           //version
+                    fileHeader.putInt(314159);      //magic number
+                    fc.write(fileHeader, 0);
+                    return false;
+                }
+
+            }
+            catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        else {
+            try {
+                db_file.createNewFile();
+                RandomAccessFile fin = null;
+                fin = new RandomAccessFile(db_file, "rw");
+                fc = fin.getChannel();
+                ByteBuffer fileHeader = ByteBuffer.allocate(this.FILEHEADERSIZE);
+                fileHeader.flip();
+                fileHeader.putInt(1);           //version
+                fileHeader.putInt(314159);      //magic number
+                fc.write(fileHeader, 0);
+            }
+            catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+            }
+            return false;
+        }
+        return false;
+    }
+
+    public void close()
+    {
+        File db_file = new File(this.dbName);
+        FileChannel fc = null;
+        RandomAccessFile fin = null;
+        try {
+            fin = new RandomAccessFile(db_file, "rw");
+            fc = fin.getChannel();
+            ByteBuffer unusedListBuffer = ByteBuffer.allocate(this.UNUSEDLISTSIZE);
+            unusedListBuffer.putInt(Page.unusedID.size());
+            for(int i = 0; i < Page.unusedID.size(); i++)
+            {
+                unusedListBuffer.putInt(Page.unusedID.get(i));
+            }
+            fc.write(unusedListBuffer, this.FILEHEADERSIZE);
+        }
+        catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 
     /**开始一个新的事务，返回新事务的transID
@@ -124,14 +219,20 @@ public class CacheMgr
      *
      * 释放对应的锁，cache不做任何操作
      */
-    public boolean rollbackTransation(int transID) throws IOException {
+    public boolean rollbackTransation(int transID)  {
         Transaction trans = transMgr.get(transID);
 
         if(trans.WR)
         {
             File journal_file = new File(Integer.toString(transID)+"-journal");
             File db_file = new File(this.dbName);
-            ObjectInputStream in = new ObjectInputStream(new FileInputStream(journal_file));
+            ObjectInputStream in = null;
+            try {
+                in = new ObjectInputStream(new FileInputStream(journal_file));
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+            }
             try
             {
                 while(in.available() > 1)
@@ -156,8 +257,12 @@ public class CacheMgr
             }
             finally
             {
-                if(in != null)
+                if(in != null) try {
                     in.close();
+                }
+                catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
 
@@ -249,7 +354,7 @@ public class CacheMgr
             FileLock lock = fc.lock();
 
             tempPage.pageBuffer.flip();
-            fc.write(tempPage.pageBuffer, tempPage.pageID*Page.PAGE_SIZE);
+            fc.write(tempPage.pageBuffer, tempPage.pageID*(Page.PAGE_SIZE+CacheMgr.FILEHEADERSIZE+CacheMgr.UNUSEDLISTSIZE));
             lock.release();
 
         }
@@ -273,6 +378,10 @@ public class CacheMgr
         return true;
     }
 
+    public void deletePage(int transID, int pageID)
+    {
+        Page.unusedID.add(pageID);
+    }
 
     /**读取文件中的指定PageID页
      *
@@ -291,7 +400,7 @@ public class CacheMgr
             FileLock lock = fc.lock(0, Long.MAX_VALUE, true);
 
             ByteBuffer tempBuffer = ByteBuffer.allocate(Page.PAGE_SIZE);
-            fc.read(tempBuffer, pageID*Page.PAGE_SIZE);
+            fc.read(tempBuffer, pageID*(Page.PAGE_SIZE+CacheMgr.FILEHEADERSIZE+CacheMgr.UNUSEDLISTSIZE));
             tempPage = new Page(pageID, tempBuffer);
 
             lock.release();
