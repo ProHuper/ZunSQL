@@ -39,7 +39,7 @@ public class VirtualMachine
 
     //todo modified
     private boolean isJoin = false;
-    private List<String> joinItem = null;
+    private int joinIndex = 0;
 
 
     private boolean suvReadOnly;
@@ -203,6 +203,7 @@ public class VirtualMachine
                 //接收到join命令，清空临时表
                 joinResult = null;
                 isJoin = true;
+                joinIndex = 0;
                 break;
 
             case AddTable:
@@ -257,10 +258,7 @@ public class VirtualMachine
         else {
             switch (activity){
                 case Select:
-                    if(isJoin)
-                        joinSelect();
-                    else
-                        select();
+                    select();
                     break;
                 case Delete:
                     delete();
@@ -367,7 +365,7 @@ public class VirtualMachine
         //todo  modifide.
         UnionOperand ans;
         if(isJoin)
-            ans = eval(filters,null);
+            ans = eval(filters, joinIndex);
         else
             ans = eval(filters, p);
 	    if(ans.getType()==BasicType.String){
@@ -387,7 +385,7 @@ public class VirtualMachine
         tran=db.beginReadTrans();
 	    //构造结果集的表头
 	    List<Column> selected=new ArrayList<>();
-	    List<String> t=db.getTable(targetTable,tran).getColumns();
+	    List<String> temp;
 	    for(String colName:selectedColumns){
             Column col=new Column(colName);
             selected.add(col);
@@ -395,16 +393,42 @@ public class VirtualMachine
         result=new QueryResult(selected);
 
         Cursor p=db.getTable(targetTable,tran).createCursor(tran);
-        List<String> temp = db.getTable(targetTable,tran).getColumns();
-        while(p!=null){
-            if(check(p)==true){
-                List<String> ansRecord=new ArrayList<String>();
-                for(int i = 0; i < temp.size(); i++){
-                    ansRecord.add(p.getData().get(i));
+        //todo for View modified.
+        if(isJoin){
+            temp = db.getTable(targetTable,tran).getColumns();
+
+            //todo modified 用于joinResult的循环匹配。
+            for(int k = 0; k < joinResult.getRes().size(); k++,joinIndex++){
+                if(check(null)){
+                    List<String> ansRecord=new ArrayList<>();
+                    for(int i = 0; i < temp.size(); i++){
+                        for(int j =0; j < selected.size(); j++){
+                            if(selected.get(j).getColumnName().equals(temp.get(i))){
+                                ansRecord.add(joinResult.getRes().get(k).get(i));
+                            }
+                        }
+                    }
+                    result.addRecord(ansRecord);
                 }
-                result.addRecord(ansRecord);
             }
-            p.moveToNext(tran);
+        }
+
+        else{
+            temp = joinResult.getHeaderString();
+            while(p!=null){
+                if(check(p)){
+                    List<String> ansRecord=new ArrayList<>();
+                    for(int i = 0; i < temp.size(); i++){
+                        for(int j =0; j < selected.size(); j++){
+                            if(selected.get(j).getColumnName().equals(temp.get(i))){
+                                ansRecord.add(p.getData().get(i));
+                            }
+                        }
+                    }
+                    result.addRecord(ansRecord);
+                }
+                p.moveToNext(tran);
+            }
         }
     }
     private void delete(){
@@ -508,29 +532,42 @@ public class VirtualMachine
         for(int i=0;i<evalDiscriptions.size();i++) {
             if(evalDiscriptions.get(i).cmd==OpCode.Operand){
                 if(evalDiscriptions.get(i).col_name!=null){
-                    if(!isJoin){
-                        for(int j = 0; j < info.size(); i++){
-                            if(info.get(j).equals(evalDiscriptions.get(i).col_name)){
-                                exp.addOperand(new UnionOperand(p.getColumnType(info.get(j)), p.getData().get(j)));
-                            }
+
+                    for(int j = 0; j < info.size(); i++){
+                        if(info.get(j).equals(evalDiscriptions.get(i).col_name)){
+                            exp.addOperand(new UnionOperand(p.getColumnType(info.get(j)), p.getData().get(j)));
                         }
                     }
 
-                    //todo modified.
-                    else{
-                        int index = joinResult.getRes().indexOf(joinItem);
-                        switch(joinResult.getHeader().get(index).getColumnType()){
-                            case "String":
-                                exp.addOperand(new UnionOperand(BasicType.String,joinItem.get(i)));
-                                break;
-                            case "Float":
-                                exp.addOperand(new UnionOperand(BasicType.Float,joinItem.get(i)));
-                                break;
-                            case "Integer":
-                                exp.addOperand(new UnionOperand(BasicType.Integer,joinItem.get(i)));
-                                break;
-                            default:
-                                Util.log("不存在的类型");
+                }
+                else{
+                    String val=evalDiscriptions.get(i).constant;
+                    BasicType cType= lowestType(val);
+                    exp.addOperand(new UnionOperand(cType,val));
+                }
+            }
+            else{
+                exp.applyOperator(evalDiscriptions.get(i).cmd);
+            }
+        }
+        return exp.getAns();
+    }
+
+    /**
+     * eval的重载，在下层不提供视图机制的时候用于处理临时表。
+     * */
+    private  UnionOperand eval(List<EvalDiscription> evalDiscriptions,int joinIndex){
+        Expression exp=new Expression();
+        List<String> infoJoin = joinResult.getHeaderString();
+
+        for(int i=0;i<evalDiscriptions.size();i++) {
+            if(evalDiscriptions.get(i).cmd==OpCode.Operand){
+                if(evalDiscriptions.get(i).col_name!=null){
+
+                    for(int j = 0; j < infoJoin.size(); i++){
+                        if(infoJoin.get(j).equals(evalDiscriptions.get(i).col_name)){
+                            exp.addOperand(new UnionOperand(joinResult.getHeader().get(j).getColumnTypeBasic()
+                                    ,joinResult.getRes().get(joinIndex).get(j)));
                         }
                     }
 
@@ -615,19 +652,6 @@ public class VirtualMachine
         }
 
         return new JoinMatch(unionHead, unionUnder);
-    }
-
-    //todo modified.
-    public void joinSelect(){
-
-        result=new QueryResult(joinResult.getHeader());
-        for(List<String> info: joinResult.getRes()){
-            joinItem = info;
-            if(check(null)){
-                result.addRecord(info);
-            }
-        }
-
     }
 
     //这个方法只用于测试自然连接操作。

@@ -1,6 +1,8 @@
 package npu.zunsql.ve;
 
 
+import npu.zunsql.tree.BasicType;
+
 class Column
 {
     String ColumnName;
@@ -32,4 +34,17 @@ class Column
     public String getColumnType() {
         return ColumnType;
     }
+
+    public BasicType getColumnTypeBasic() {
+        switch(ColumnType){
+            case "String":
+                return BasicType.String;
+            case "Integer":
+                return BasicType.Integer;
+            case "Float":
+                return BasicType.Float;
+        }
+        return null;
+    }
+
 }

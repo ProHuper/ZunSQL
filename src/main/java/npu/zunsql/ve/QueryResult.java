@@ -30,6 +30,12 @@ public class QueryResult
         return header;
     }
 
+    public List<String> getHeaderString() {
+        List<String> result = new ArrayList<>();
+        header.forEach(n -> result.add(n.ColumnName));
+        return result;
+    }
+
     public List<List<String>> getRes() {
         return res;
     }
