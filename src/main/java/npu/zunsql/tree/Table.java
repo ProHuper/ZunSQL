@@ -67,7 +67,7 @@ public class Table implements TableReader ,Serializable
         ByteBuffer thisBufer = pageOne.getPageBuffer();
         // TODO:读取Buffer。
         byte [] bytes=new byte[Page.PAGE_SIZE] ;
-        thisBufer.get(bytes,0,Page.PAGE_SIZE);
+        thisBufer.get(bytes,0,thisBufer.remaining());
 
         ByteArrayInputStream byteTable=new ByteArrayInputStream(bytes);
         ObjectInputStream objTable=new ObjectInputStream(byteTable);
