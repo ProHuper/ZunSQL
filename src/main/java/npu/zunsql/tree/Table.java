@@ -7,7 +7,15 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Table implements TableReader
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.nio.charset.Charset;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+
+public class Table implements TableReader ,Serializable
 {
     protected String tableName;
 
@@ -29,16 +37,49 @@ public class Table implements TableReader
         return cacheManager.writePage(myTran.tranNum, pageOne);
     }
 
+    private void intoBytes() throws IOException {
+        byte [] bytes=new byte[Page.PAGE_SIZE] ;
+        ByteArrayOutputStream byt=new ByteArrayOutputStream();
+
+        ObjectOutputStream obj=new ObjectOutputStream(byt);
+        obj.writeObject(tableName);
+        obj.writeObject(keyColumn);
+        obj.writeObject(columns);
+        obj.writeObject(lock);
+        obj.writeObject(rootNodePage);
+        obj.writeObject(cacheManager);
+        obj.writeObject(pageOne);
+        bytes=byt.toByteArray();
+        ByteBuffer thisBufer = pageOne.getPageBuffer();
+        thisBufer.put(bytes);
+
+    }
+
+
+
     // 已有page，只需要加载其中的信息。
     // 新建table的工作在database中已经完成，因此，可能加载出只有表头的空表。
-    protected Table(int pageID, CacheMgr cacheManager, Transaction thisTran)
-    {
+    protected Table(int pageID, CacheMgr cacheManager, Transaction thisTran) throws IOException, ClassNotFoundException {
         super();
         this.cacheManager = cacheManager;
         pageOne = this.cacheManager.readPage(thisTran.tranNum,pageID);
 
         ByteBuffer thisBufer = pageOne.getPageBuffer();
         // TODO:读取Buffer。
+        byte [] bytes=new byte[Page.PAGE_SIZE] ;
+        thisBufer.get(bytes,0,Page.PAGE_SIZE);
+
+        ByteArrayInputStream byteTable=new ByteArrayInputStream(bytes);
+        ObjectInputStream objTable=new ObjectInputStream(byteTable);
+
+        this.tableName=(String)objTable.readObject();
+        this.keyColumn=(Column) objTable.readObject();
+        this.columns=(List<Column>)objTable.readObject();
+        this.lock=(LockType)objTable.readObject();
+        this.rootNodePage=(int)objTable.readObject();
+        this.cacheManager=(CacheMgr) objTable.readObject();
+        this.pageOne=(Page)objTable.readObject();
+
 
     }
 
@@ -111,22 +152,21 @@ public class Table implements TableReader
         }
     }
 
-    public boolean lock(Transaction thistran)
-    {
+    public boolean lock(Transaction thistran) throws IOException {
         lock = LockType.Locked;   //NULL
 
         // TODO:更新pageOne。
+        intoBytes();
 
         while(!writeMyPage(thistran));
         return true;
     }
 
-    public boolean unLock(Transaction thistran)
-    {
+    public boolean unLock(Transaction thistran) throws IOException {
         lock = LockType.Shared;   //NULL
 
         // TODO:更新pageOne。
-
+        intoBytes();
         while(!writeMyPage(thistran));
         return true;
     }
