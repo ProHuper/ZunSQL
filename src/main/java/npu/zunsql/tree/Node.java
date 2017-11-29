@@ -3,9 +3,7 @@ package npu.zunsql.tree;
 import npu.zunsql.cache.CacheMgr;
 import npu.zunsql.cache.Page;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.List;
 /**
@@ -42,19 +40,27 @@ public class Node {
     private Page pageOne;
 
 
-    protected Node(int thisPageID, CacheMgr cacheManager, Transaction thisTran)
-    {
+    protected Node(int thisPageID, CacheMgr cacheManager, Transaction thisTran) throws IOException, ClassNotFoundException {
         this.cacheManager = cacheManager;
         pageOne = this.cacheManager.readPage(thisTran.tranNum, thisPageID);
-        // TODO:根据thisPage加载本Node信息
+        // 根据thisPage加载本Node信息
 
+        ByteBuffer thisBufer = pageOne.getPageBuffer();
+        byte [] bytes=new byte[Page.PAGE_SIZE] ;
+        thisBufer.get(bytes,0,thisBufer.remaining());
 
+        ByteArrayInputStream byteTable=new ByteArrayInputStream(bytes);
+        ObjectInputStream objTable=new ObjectInputStream(byteTable);
 
+        this.sonNodeList=(List<Integer>)objTable.readObject();
+        this.fatherNodeID=(int) objTable.readObject();
+        this.order=(int)objTable.readObject();
+        this.rowList=(List<Row>)objTable.readObject();
 
     }
 
     // 根据Node的属性构造Node。
-    private Node(List<Row> thisRowList, List<Integer> thisSonList, int thisOrder, CacheMgr cacheManager, Transaction thisTran) throws IOException {
+    private Node(List<Row> thisRowList, List<Integer> thisSonList, int thisOrder, CacheMgr cacheManager, Transaction thisTran) throws IOException, ClassNotFoundException {
         ByteBuffer buffer = ByteBuffer.allocate(Page.PAGE_SIZE);
         rowList = thisRowList;
         sonNodeList = thisSonList;
@@ -111,7 +117,7 @@ public class Node {
     }
 
     // 分裂除根节点外的其他节点。
-    private Node devideNode(Transaction thisTran) throws IOException {
+    private Node devideNode(Transaction thisTran) throws IOException, ClassNotFoundException {
         List<Row> rightRow;
         List<Integer> rightNode;
         rightRow = rowList.subList(M/2 + 1, M);
@@ -126,7 +132,7 @@ public class Node {
     }
 
     // 分裂根节点
-    private boolean rootDevideNode(Transaction thisTran) throws IOException {
+    private boolean rootDevideNode(Transaction thisTran) throws IOException, ClassNotFoundException {
         List<Row> leftRow;
         List<Row> rightRow;
         List<Integer> leftNode;
@@ -148,7 +154,7 @@ public class Node {
     }
 
     // 调整本节点使其顺序为sonOrder的儿子row数量恢复至M/2
-    private boolean adjustNode(int sonOrder, Transaction thisTran) throws IOException {
+    private boolean adjustNode(int sonOrder, Transaction thisTran) throws IOException, ClassNotFoundException {
         Node thisSonNode = new Node(sonNodeList.get(sonOrder),cacheManager,thisTran);
 
         // 排除最大值边界越界情况，向左下合并
@@ -186,7 +192,7 @@ public class Node {
     }
 
     // 在本节点中添加子节点，分别添加row和对应的SonNode。
-    private boolean addNode(Row row, Node node, Transaction thisTran) throws IOException {
+    private boolean addNode(Row row, Node node, Transaction thisTran) throws IOException, ClassNotFoundException {
         // 用于记录是否添加了这个节点。
         boolean addOrNot = false;
         for (int i = 0; i < rowList.size(); i++)
@@ -236,7 +242,7 @@ public class Node {
         }
     }
 
-    private boolean deleteNode(int sonOrder,Transaction thisTran) throws IOException {
+    private boolean deleteNode(int sonOrder,Transaction thisTran) throws IOException, ClassNotFoundException {
         Row thisRow;
         if (sonOrder < sonNodeList.size() - 1)
         {
@@ -321,7 +327,7 @@ public class Node {
         }
     }
 
-    public boolean insertRow(Row row,Transaction thisTran) throws IOException {
+    public boolean insertRow(Row row,Transaction thisTran) throws IOException, ClassNotFoundException {
         boolean insertOrNot = false;
         int insertNumber = 0;
         for (int i = 0; i < rowList.size(); i++)
@@ -368,7 +374,7 @@ public class Node {
         }
     }
 
-    public boolean deleteRow(Cell key,Transaction thisTran) throws IOException {
+    public boolean deleteRow(Cell key,Transaction thisTran) throws IOException, ClassNotFoundException {
         boolean deleteOrNot = false;
         int deleteNumber = 0;
         for (int i = 0; i < rowList.size(); i++)
@@ -450,8 +456,7 @@ public class Node {
         }
     }
 
-    public Row getFirstRow(Transaction thisTran)
-    {
+    public Row getFirstRow(Transaction thisTran) throws IOException, ClassNotFoundException {
         if (sonNodeList == null)
         {
             return rowList.get(0);
@@ -462,8 +467,7 @@ public class Node {
         }
     }
 
-    public Row getLastRow(Transaction thisTran)
-    {
+    public Row getLastRow(Transaction thisTran) throws IOException, ClassNotFoundException {
         if (sonNodeList == null)
         {
             return rowList.get(rowList.size() - 1);
@@ -474,8 +478,7 @@ public class Node {
         }
     }
 
-    public Row getSpecifyRow(Cell key,Transaction thisTran)
-    {
+    public Row getSpecifyRow(Cell key,Transaction thisTran) throws IOException, ClassNotFoundException {
         int insertNumber = -1;
         for (int i = 0; i < rowList.size(); i++)
         {
