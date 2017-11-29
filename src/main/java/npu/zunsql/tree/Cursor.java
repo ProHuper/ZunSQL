@@ -77,7 +77,6 @@ public abstract class Cursor
 
 class TableCursor extends Cursor
 {
-
     protected Table aimTable;
     protected int thisRowID;
     protected Node thisNode;

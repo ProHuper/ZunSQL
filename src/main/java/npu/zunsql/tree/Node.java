@@ -438,11 +438,11 @@ public class Node {
         }
     }
 
-    public Row getRow()
+    public Row getRow(int id)
     {
         if (rowList.size() > 0)
         {
-            return rowList.get(0);
+            return rowList.get(id);
         }
         else
         {
