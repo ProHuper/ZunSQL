@@ -22,22 +22,24 @@ public class Database
     private CacheMgr cacheManager;
 
     // 首先新建一个Page，然后进行相关Page写操作。
-    protected Database(String name) throws IOException
-    {
+    protected Database(String name) throws IOException, ClassNotFoundException {
         dBName = name;
         cacheManager = new CacheMgr(dBName);
 
-        // TODO:根据CacheMgr得到本db是否存在的信息
-        boolean dbExist = false;
-        if(dbExist)
+        // 判断数据库是否为新建数据库，即pageid为0的一页是否被填充
+        boolean dbisNew = false;
+        dbisNew=cacheManager.isNew();
+        if(!dbisNew)
         {
             Transaction initTran = beginReadTrans();
-            //TODO:从page[0]解析master。
-            master = null;
+
+            //从page[0]解析master。
+            master = new Table(0, cacheManager, initTran);
             initTran.Commit();
         }
         else
         {
+            //建立masterTable
             Transaction initTran = beginWriteTrans();
             addMaster(initTran);
             initTran.Commit();
@@ -87,10 +89,11 @@ public class Database
     }
 
     //根据传来的表名，主键以及其他的列名来新建一个表
-    public Table createTable(String tableName, String keyName, List<String> columnNameList,List<BasicType> tList, Transaction thisTran)
-    {
+    public Table createTable(String tableName, String keyName, List<String> columnNameList,List<BasicType> tList, Transaction thisTran) throws IOException {
         ByteBuffer tempBuffer = ByteBuffer.allocate(Page.PAGE_SIZE);
-        // TODO:将表头信息和首节点信息存入ByteBuffer中
+        // 将表头信息和首节点信息存入ByteBuffer中 新建的表锁应该为什么锁
+        LockType lock=LockType.Shared;
+
         Page tablePage = new Page(tempBuffer);
         cacheManager.writePage(thisTran.tranNum,tablePage);
         Integer pageID = tablePage.getPageID();
@@ -101,6 +104,21 @@ public class Database
 
         Cursor masterCursor = master.createCursor(thisTran);
         masterCursor.insert(thisTran,masterRow_s);
+
+
+        byte [] bytes=new byte[Page.PAGE_SIZE] ;
+        ByteArrayOutputStream byt=new ByteArrayOutputStream();
+
+        ObjectOutputStream obj=new ObjectOutputStream(byt);
+        obj.writeObject(tableName);
+        obj.writeObject(keyName);
+        obj.writeObject(columnNameList);
+        obj.writeObject(lock);
+        obj.writeObject(-1);
+        obj.writeObject(cacheManager);
+        obj.writeObject(tablePage);
+        bytes=byt.toByteArray();
+        tablePage.getPageBuffer().put(bytes);
 
         return new Table(pageID,cacheManager,thisTran);   //NULL
     }
