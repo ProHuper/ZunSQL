@@ -96,14 +96,19 @@ public class Database
 
         // 将表头信息和首节点信息存入ByteBuffer中 新建的表锁应该为什么锁
         LockType lock=LockType.Locked;
+        List<Column> columns = new ArrayList<Column>();
+        for(int i=0;i<columnNameList.size();i++)
+        {
+            Column tempColumn = new Column(tList.get(i),columnNameList.get(i),i);
+            columns.add(tempColumn);
+        }
 
         ObjectOutputStream obj=new ObjectOutputStream(byt);
         obj.writeObject(tableName);
         obj.writeObject(keyName);
-        obj.writeObject(columnNameList);
+        obj.writeObject(columns);
         obj.writeObject(lock);
         obj.writeObject(-1);
-        obj.writeObject(cacheManager);
         bytes=byt.toByteArray();
         tempBuffer.put(bytes);
 
@@ -117,9 +122,6 @@ public class Database
 
         Cursor masterCursor = master.createCursor(thisTran);
         masterCursor.insert(thisTran,masterRow_s);
-
-
-
 
         return new Table(pageID,cacheManager,thisTran);   //NULL
     }
