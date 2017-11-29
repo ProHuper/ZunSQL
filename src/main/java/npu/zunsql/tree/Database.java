@@ -47,8 +47,7 @@ public class Database
     }
 
 
-    private boolean addMaster(Transaction initTran) throws IOException
-    {
+    private boolean addMaster(Transaction initTran) throws IOException, ClassNotFoundException {
         // 添加master table
         Column keyColumn = new Column(BasicType.String,"tableName",0);
         Column valueColumn = new Column(BasicType.Integer,"pageNumber",1);
@@ -89,7 +88,7 @@ public class Database
     }
 
     //根据传来的表名，主键以及其他的列名来新建一个表
-    public Table createTable(String tableName, String keyName, List<String> columnNameList,List<BasicType> tList, Transaction thisTran) throws IOException {
+    public Table createTable(String tableName, String keyName, List<String> columnNameList,List<BasicType> tList, Transaction thisTran) throws IOException, ClassNotFoundException {
         ByteBuffer tempBuffer = ByteBuffer.allocate(Page.PAGE_SIZE);
         // 将表头信息和首节点信息存入ByteBuffer中 新建的表锁应该为什么锁
         LockType lock=LockType.Shared;
@@ -130,16 +129,14 @@ public class Database
     }
 
     //根据传来的表名返回Table表对象
-    public Table getTable(String tableName, Transaction thisTran)
-    {
+    public Table getTable(String tableName, Transaction thisTran) throws IOException, ClassNotFoundException {
         Cursor masterCursor = master.createCursor(thisTran);
         masterCursor.moveToUnpacked(thisTran,tableName);
         return new Table(masterCursor.getCell_i("pageNumber"),cacheManager,thisTran);
     }
 
     //给整个数据库中的表全部加锁
-    public boolean lock(Transaction thisTran)
-    {
+    public boolean lock(Transaction thisTran) throws IOException, ClassNotFoundException {
         if(master.isLocked())
         {
             return false;
@@ -158,8 +155,7 @@ public class Database
     }
 
     //给数据库中全部的表解锁
-    public boolean unLock(Transaction thisTran)
-    {
+    public boolean unLock(Transaction thisTran) throws IOException, ClassNotFoundException {
         if(master.isLocked())
         {
             master.unLock(thisTran);

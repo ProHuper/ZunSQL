@@ -65,7 +65,6 @@ public class Table implements TableReader ,Serializable
         pageOne = this.cacheManager.readPage(thisTran.tranNum,pageID);
 
         ByteBuffer thisBufer = pageOne.getPageBuffer();
-        // TODO:读取Buffer。
         byte [] bytes=new byte[Page.PAGE_SIZE] ;
         thisBufer.get(bytes,0,thisBufer.remaining());
 
@@ -155,7 +154,6 @@ public class Table implements TableReader ,Serializable
     public boolean lock(Transaction thistran) throws IOException {
         lock = LockType.Locked;   //NULL
 
-        // TODO:更新pageOne。
         intoBytes();
 
         while(!writeMyPage(thistran));
@@ -165,7 +163,6 @@ public class Table implements TableReader ,Serializable
     public boolean unLock(Transaction thistran) throws IOException {
         lock = LockType.Shared;   //NULL
 
-        // TODO:更新pageOne。
         intoBytes();
         while(!writeMyPage(thistran));
         return true;

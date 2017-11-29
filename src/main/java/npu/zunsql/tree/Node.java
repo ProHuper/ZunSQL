@@ -52,7 +52,7 @@ public class Node {
         rowList = thisRowList;
         sonNodeList = thisSonList;
         fatherNodeID = -1;
-
+        this.cacheManager = cacheManager;
         // 为每一位儿子维护父亲和排位信息。
         for (int i = 0; i < sonNodeList.size(); i++)
         {
