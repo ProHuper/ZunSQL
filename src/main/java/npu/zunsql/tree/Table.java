@@ -11,20 +11,24 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
-import java.nio.charset.Charset;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 
 public class Table implements TableReader ,Serializable
 {
+    //表名
     protected String tableName;
 
+    //主键
     protected Column keyColumn;
 
+    //各列
     protected List<Column> columns;
 
+    //锁类型
     protected LockType lock;
 
+    //根节点
     protected int rootNodePage;
 
     // page层的Mgr，用于对Page层进行操作。
@@ -32,13 +36,14 @@ public class Table implements TableReader ,Serializable
 
     private Page pageOne;
 
+    // 写本页
     private boolean writeMyPage(Transaction myTran)
     {
-        // 写本页
         return cacheManager.writePage(myTran.tranNum, pageOne);
     }
 
-    private void intoBytes(Transaction thisTran) throws IOException {
+    // 维护page信息
+    private void writePageOne(Transaction thisTran) throws IOException {
         byte [] bytes=new byte[Page.PAGE_SIZE] ;
         ByteArrayOutputStream byt=new ByteArrayOutputStream();
 
@@ -49,21 +54,12 @@ public class Table implements TableReader ,Serializable
         obj.writeObject(lock);
         obj.writeObject(rootNodePage);
         bytes=byt.toByteArray();
-        ByteBuffer thisBufer = pageOne.getPageBuffer();
-        thisBufer.put(bytes);
-        cacheManager.writePage(thisTran.tranNum,pageOne);
+        pageOne.getPageBuffer().put(bytes);
 
+        writeMyPage(thisTran);
     }
 
-
-
-    // 已有page，只需要加载其中的信息。
-    // 新建table的工作在database中已经完成，因此，可能加载出只有表头的空表。
-    protected Table(int pageID, CacheMgr cacheManager, Transaction thisTran) throws IOException, ClassNotFoundException {
-        super();
-        this.cacheManager = cacheManager;
-        pageOne = this.cacheManager.readPage(thisTran.tranNum,pageID);
-
+    private boolean readPageOne() throws IOException, ClassNotFoundException {
         ByteBuffer thisBufer = pageOne.getPageBuffer();
         byte [] bytes=new byte[Page.PAGE_SIZE] ;
         thisBufer.get(bytes,0,thisBufer.remaining());
@@ -76,25 +72,38 @@ public class Table implements TableReader ,Serializable
         this.columns=(List<Column>)objTable.readObject();
         this.lock=(LockType)objTable.readObject();
         this.rootNodePage=(int)objTable.readObject();
-
-
+        return true;
     }
 
+    // 已有page，只需要加载其中的信息。
+    // 新建table的工作在database中已经完成，因此，可能加载出只有表头的空表。
+    protected Table(int pageID, CacheMgr cacheManager, Transaction thisTran) throws IOException, ClassNotFoundException
+    {
+        super();
+        this.cacheManager = cacheManager;
+        pageOne = this.cacheManager.readPage(thisTran.tranNum,pageID);
+
+        readPageOne();
+    }
+
+    //获取表首页
     protected Integer getTablePageID()
     {
         return pageOne.getPageID();
     }
 
+    //获取主键
     protected Column getKeyColumn()
     {
         return keyColumn;
     }
 
-    protected Node getRootNode(Transaction thisTran)
-    {
+    //获取根节点
+    protected Node getRootNode(Transaction thisTran) throws IOException, ClassNotFoundException {
         return new Node(rootNodePage, cacheManager, thisTran);
     }
 
+    //给定列名，获取该列
     protected Column getColumn(String columnName)
     {
         for(int i = 0; i < columns.size(); i++)
@@ -107,11 +116,13 @@ public class Table implements TableReader ,Serializable
         return null;
     }
 
+    //创建游标
     public Cursor createCursor(Transaction thistran)
     {
         return new TableCursor(this,thistran);  //NULL
     }
 
+    //获取列名列表
     public List<String> getColumnsName()
     {
         List<String> sList = new ArrayList<String>();
@@ -122,6 +133,7 @@ public class Table implements TableReader ,Serializable
         return sList;
     }
 
+    //获取列类型列表
     public List<BasicType> getColumnsType()
     {
         List<BasicType> sList = new ArrayList<BasicType>();
@@ -132,11 +144,13 @@ public class Table implements TableReader ,Serializable
         return sList;
     }
 
+    // 获取表名
     public String getTableName()
     {
         return tableName;   //NULL
     }
 
+    //判断是否上锁
     public boolean isLocked()
     {
         if (lock == LockType.Locked)
@@ -149,19 +163,21 @@ public class Table implements TableReader ,Serializable
         }
     }
 
+    //上写锁
     public boolean lock(Transaction thistran) throws IOException {
         lock = LockType.Locked;   //NULL
 
-        intoBytes(thistran);
+        writePageOne(thistran);
 
         while(!writeMyPage(thistran));
         return true;
     }
 
+    //解写锁，上读锁
     public boolean unLock(Transaction thistran) throws IOException {
         lock = LockType.Shared;   //NULL
 
-        intoBytes(thistran);
+        writePageOne(thistran);
         while(!writeMyPage(thistran));
         return true;
     }
