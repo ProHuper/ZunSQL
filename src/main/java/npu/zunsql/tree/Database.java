@@ -61,22 +61,12 @@ public class Database
         return true;
     }
 
-    public boolean dropTable(String tableName,Transaction thisTran) throws IOException, ClassNotFoundException {
-        // TODO：递归释放此Page
-        Cursor thisCursor = master.createCursor(thisTran);
-        thisCursor.moveToUnpacked(thisTran,"tableName");
-        int pageID = thisCursor.getCell_i("pageNumber");
-        Table thistable = new Table(pageID,cacheManager,thisTran);
-        thistable.getRootNode(thisTran).drop(thisTran);
-        return true;
-    }
-
-    public boolean dropTable(Table table,Transaction thisTran)
+    public boolean colse()
     {
-        // TODO：递归释放此Page
-
+        cacheManager.close();
         return true;
     }
+
 
     //开始一个读事务操作
     public Transaction beginReadTrans()
@@ -91,19 +81,33 @@ public class Database
     }
 
     //根据传来的表名，主键以及其他的列名来新建一个表
-    public Table createTable(String tableName, String keyName, List<String> columnNameList,List<BasicType> tList, Transaction thisTran) throws IOException, ClassNotFoundException {
+    public Table createTable(String tableName, String keyName, List<String> columnNameList,List<BasicType> tList, Transaction thisTran) throws IOException, ClassNotFoundException
+    {
         ByteBuffer tempBuffer = ByteBuffer.allocate(Page.PAGE_SIZE);
 
         byte [] bytes=new byte[Page.PAGE_SIZE] ;
         ByteArrayOutputStream byt=new ByteArrayOutputStream();
 
         // 将表头信息和首节点信息存入ByteBuffer中 新建的表锁应该为什么锁
-        LockType lock=LockType.Locked;
+        LockType lock=LockType.Shared;
+
         List<Column> columns = new ArrayList<Column>();
+
+        // 整合columnlist并且将主键放置第一列
         for(int i=0;i<columnNameList.size();i++)
         {
-            Column tempColumn = new Column(tList.get(i),columnNameList.get(i),i);
-            columns.add(tempColumn);
+            int temp = 0;
+            if(columnNameList.get(i).equals(keyName))
+            {
+                Column tempColumn = new Column(tList.get(i),columnNameList.get(i),0);
+                columns.add(0,tempColumn);
+                temp--;
+            }
+            else
+            {
+                Column tempColumn = new Column(tList.get(i),columnNameList.get(i),i+1+temp);
+                columns.add(tempColumn);
+            }
         }
 
         ObjectOutputStream obj=new ObjectOutputStream(byt);
@@ -135,34 +139,56 @@ public class Database
         return new View(sList,tList,rowStringList);
     }
 
+
+    public boolean dropTable(String tableName,Transaction thisTran) throws IOException, ClassNotFoundException
+    {
+        Cursor masterCursor = master.createCursor(thisTran);
+        masterCursor.moveToUnpacked(thisTran,tableName);
+        int pageID = masterCursor.getCell_i("pageNumber");
+        Table thistable = new Table(pageID,cacheManager,thisTran);
+        thistable.getRootNode(thisTran).drop(thisTran);
+        cacheManager.deletePage(thisTran.tranNum,pageID);
+        masterCursor.delete(thisTran);
+        return true;
+    }
+
+    public boolean dropTable(Table table,Transaction thisTran) throws IOException, ClassNotFoundException
+    {
+        return dropTable(table.tableName,thisTran);
+    }
+
+
     //根据传来的表名返回Table表对象
-    public Table getTable(String tableName, Transaction thisTran) throws IOException, ClassNotFoundException {
+    public Table getTable(String tableName, Transaction thisTran) throws IOException, ClassNotFoundException
+    {
         Cursor masterCursor = master.createCursor(thisTran);
         masterCursor.moveToUnpacked(thisTran,tableName);
         return new Table(masterCursor.getCell_i("pageNumber"),cacheManager,thisTran);
     }
 
     //给整个数据库中的表全部加锁
-    public boolean lock(Transaction thisTran) throws IOException, ClassNotFoundException {
+    public boolean lock(Transaction thisTran) throws IOException, ClassNotFoundException
+    {
         if(master.isLocked())
         {
             return false;
         }
         else
         {
-            master.lock(thisTran);
             Cursor masterCursor = master.createCursor(thisTran);
             do
             {
                 Table temp = new Table(masterCursor.getCell_i("pageNumber"),cacheManager,thisTran);
                 temp.lock(thisTran);
             }while(masterCursor.moveToNext(thisTran));
+            master.lock(thisTran);
             return true;
         }
     }
 
     //给数据库中全部的表解锁
-    public boolean unLock(Transaction thisTran) throws IOException, ClassNotFoundException {
+    public boolean unLock(Transaction thisTran) throws IOException, ClassNotFoundException
+    {
         if(master.isLocked())
         {
             master.unLock(thisTran);
@@ -179,4 +205,5 @@ public class Database
             return true;
         }
     }
+
 }
