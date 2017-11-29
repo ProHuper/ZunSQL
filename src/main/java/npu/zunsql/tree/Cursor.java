@@ -1,5 +1,6 @@
 package npu.zunsql.tree;
 
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -38,20 +39,20 @@ public abstract class Cursor
     public abstract Double getKeyCell_d();
 
     // 游标移至首条
-    public abstract boolean moveToFirst(Transaction thisTran);
+    public abstract boolean moveToFirst(Transaction thisTran) throws IOException, ClassNotFoundException;
 
     // 游标移至末尾
-    public abstract boolean moveToLast(Transaction thisTran);
+    public abstract boolean moveToLast(Transaction thisTran) throws IOException, ClassNotFoundException;
 
     // 游标后移一条
-    public abstract boolean moveToNext(Transaction thisTran);
+    public abstract boolean moveToNext(Transaction thisTran) throws IOException, ClassNotFoundException;
 
     // 游标前移一条
-    public abstract boolean moveToPrevious(Transaction thisTran);
+    public abstract boolean moveToPrevious(Transaction thisTran) throws IOException, ClassNotFoundException;
 
     // 游标移至指定位
     // 输入参数：key主键的字符串值
-    public abstract boolean moveToUnpacked(Transaction thisTran,String key);
+    public abstract boolean moveToUnpacked(Transaction thisTran,String key) throws IOException, ClassNotFoundException;
 
     // 游标移至指定位
     // 输入参数：key主键的整型值
@@ -133,40 +134,102 @@ class TableCursor extends Cursor
     }
 
     // 游标移至首条
-    public boolean moveToFirst(Transaction thisTran)
-    {
+    public boolean moveToFirst(Transaction thisTran) throws IOException, ClassNotFoundException {
         thisNode = aimTable.getRootNode(thisTran);
+        while(thisNode.getSonNodeList()!=null)
+        {
+            thisNode = thisNode.getSpecialSonNode(0,thisTran);
+        }
         thisRowID = 0;
         return true;
     }
 
     // 游标移至末尾
-    public boolean moveToLast(Transaction thisTran)
-    {
-        //TODO:游标移至末尾
+    public boolean moveToLast(Transaction thisTran) throws IOException, ClassNotFoundException {
+        thisNode = aimTable.getRootNode(thisTran);
+        while(thisNode.getSonNodeList()!=null)
+        {
+            thisNode = thisNode.getSpecialSonNode(thisNode.getSonNodeList().size()-1,thisTran);
+        }
+
         return true;
     }
 
     // 游标后移一条
-    public boolean moveToNext(Transaction thisTran)
-    {
-        //TODO:游标后移一位
-        return true;
+    public boolean moveToNext(Transaction thisTran) throws IOException, ClassNotFoundException {
+        //int flagchang=0;
+        if(thisRowID<thisNode.getRowList().size()-1)
+        {
+            thisRowID++;
+            return true;
+        }
+        else
+        {
+            while(thisNode.getFatherNodeID()>0)
+            {
+                if(thisNode.getOrder()<thisNode.getFatherNode(thisTran).getSonNodeList().size()-1)
+                {
+                    thisNode=thisNode.getFatherNode(thisTran).getSpecialSonNode(thisNode.getOrder()+1,thisTran);
+                    while(thisNode.getSonNodeList()!=null)
+                    {
+                        thisNode = thisNode.getSpecialSonNode(0,thisTran);
+                    }
+                    thisRowID=0;
+                    return true;
+                }
+                else    //如果当前结点的父亲结点位是当前结点的祖父结点的最后一个儿子结点
+                {
+                        thisNode=thisNode.getFatherNode(thisTran);
+
+                }
+            }
+        }
+        moveToLast(thisTran);
+        return false;
     }
 
     // 游标前移一条
-    public boolean moveToPrevious(Transaction thisTran)
-    {
-        //TODO:游标前移一位
-        return true;
+    public boolean moveToPrevious(Transaction thisTran) throws IOException, ClassNotFoundException {
+        if(thisRowID>0)
+        {
+            thisRowID--;
+            return true;
+        }
+        else
+        {
+            while(thisNode.getFatherNodeID()>0)
+            {
+                if(thisNode.getOrder()>0)
+                {
+                    thisNode=thisNode.getFatherNode(thisTran).getSpecialSonNode(thisNode.getOrder()-1,thisTran);
+                    while(thisNode.getSonNodeList()!=null)
+                    {
+                        thisNode = thisNode.getSpecialSonNode(thisNode.getSonNodeList().size()-1,thisTran);
+                    }
+                    thisRowID=thisNode.getRowList().size()-1;
+                    return true;
+                }
+                else    //如果当前结点的父亲结点位是当前结点的祖父结点的第一个儿子结点
+                {
+                    thisNode=thisNode.getFatherNode(thisTran);
+
+                }
+            }
+        }
+        moveToFirst(thisTran);
+        return false;
     }
 
     // 游标移至指定位
     // 输入参数：key主键的字符串值
-    public boolean moveToUnpacked(Transaction thisTran,String key)
-    {
+    public boolean moveToUnpacked(Transaction thisTran,String key) throws IOException, ClassNotFoundException {
         Cell keyCell = new Cell(key);
-        // TODO:游标移至指定位
+        thisNode=aimTable.getRootNode(thisTran);
+        while(keyCell.bigerThan(thisNode.getFirstRow(thisTran).getCell(0))&&thisNode.getLastRow(thisTran).getCell(0).bigerThan(keyCell))
+
+
+
+
         return true;
     }
 
@@ -212,8 +275,14 @@ class TableCursor extends Cursor
     // 调整本条内容
     public boolean setData(Transaction thistran,List<String> stringList)
     {
-        delete(thistran);
-        insert(thistran,stringList);
+        if(!delete(thistran))
+        {
+            return false;
+        };
+        if(!insert(thistran,stringList))
+        {
+            return false;
+        };
         return true;
     }
 }
@@ -360,6 +429,14 @@ class ViewCursor extends Cursor
     // 调整本条内容
     public boolean setData(Transaction thisTran,List<String> stringList)
     {
-        return false;
+        if(!delete(thisTran))
+        {
+            return false;
+        }
+        if(!insert(thisTran,stringList))
+        {
+            return false;
+        }
+        return true;
     }
 }

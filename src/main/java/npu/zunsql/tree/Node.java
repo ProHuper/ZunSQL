@@ -327,6 +327,34 @@ public class Node {
         }
     }
 
+    protected List<Integer> getSonNodeList()
+    {
+        return sonNodeList;
+
+    }
+
+    protected int getFatherNodeID()
+    {
+        return fatherNodeID;
+    }
+
+    protected Node getSpecialSonNode(int sonOrder,Transaction thisTran) throws IOException, ClassNotFoundException {
+        return new Node(sonNodeList.get(sonOrder),cacheManager,thisTran);
+    }
+
+    protected List<Row> getRowList()
+    {
+        return rowList;
+    }
+    protected Node getFatherNode(Transaction thisTran) throws IOException, ClassNotFoundException
+    {
+        return new Node(fatherNodeID,cacheManager,thisTran);
+    }
+    protected int getOrder()
+    {
+        return order;
+    }
+
     public boolean insertRow(Row row,Transaction thisTran) throws IOException, ClassNotFoundException {
         boolean insertOrNot = false;
         int insertNumber = 0;
@@ -523,4 +551,7 @@ public class Node {
         }
 
     }
+
+
+
 }
