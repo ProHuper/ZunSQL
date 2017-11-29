@@ -61,10 +61,13 @@ public class Database
         return true;
     }
 
-    public boolean dropTable(String tableName,Transaction thisTran)
-    {
+    public boolean dropTable(String tableName,Transaction thisTran) throws IOException, ClassNotFoundException {
         // TODO：递归释放此Page
-
+        Cursor thisCursor = master.createCursor(thisTran);
+        thisCursor.moveToUnpacked(thisTran,"tableName");
+        int pageID = thisCursor.getCell_i("pageNumber");
+        Table thistable = new Table(pageID,cacheManager,thisTran);
+        thistable.getRootNode(thisTran).drop(thisTran);
         return true;
     }
 

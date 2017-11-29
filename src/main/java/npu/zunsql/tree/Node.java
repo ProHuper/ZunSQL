@@ -374,6 +374,12 @@ public class Node {
         }
     }
 
+    public boolean drop(Transaction thisTran)
+    {
+        // TODO:递归清理所有节点
+        return true;
+    }
+
     public boolean deleteRow(Cell key,Transaction thisTran) throws IOException, ClassNotFoundException {
         boolean deleteOrNot = false;
         int deleteNumber = 0;
