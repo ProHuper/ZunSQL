@@ -79,13 +79,14 @@ class TableCursor extends Cursor
 {
 
     protected Table aimTable;
-    protected Row thisRow;
+    protected int thisRowID;
+    protected Node thisNode;
 
     protected TableCursor(Table thisTable, Transaction thisTran)
     {
         super();
         aimTable = thisTable;
-        thisRow = aimTable.getRootNode(thisTran).getFirstRow();
+        thisRowID = 0;
     }
 
     public BasicType getColumnType(String columnName)
@@ -97,21 +98,21 @@ class TableCursor extends Cursor
     // 输入参数：columnName，列名。
     public String getCell_s(String columnName)
     {
-        return thisRow.getCell(aimTable.getColumn(columnName).getNumber()).getValue_s();
+        return thisNode.getRow(thisRowID).getCell(aimTable.getColumn(columnName).getNumber()).getValue_s();
     }
 
     // 获取某一列的单元整形。
     // 输入参数：columnName，列名。
     public Integer getCell_i(String columnName)
     {
-        return thisRow.getCell(aimTable.getColumn(columnName).getNumber()).getValue_i();
+        return thisNode.getRow(thisRowID).getCell(aimTable.getColumn(columnName).getNumber()).getValue_i();
     }
 
     // 获取某一列的单元双精度。
     // 输入参数：columnName，列名。
     public Double getCell_d(String columnName)
     {
-        return thisRow.getCell(aimTable.getColumn(columnName).getNumber()).getValue_d();
+        return thisNode.getRow(thisRowID).getCell(aimTable.getColumn(columnName).getNumber()).getValue_d();
     }
 
     // 获取主键单元字符串。
@@ -135,35 +136,30 @@ class TableCursor extends Cursor
     // 游标移至首条
     public boolean moveToFirst(Transaction thisTran)
     {
-        thisRow = aimTable.getRootNode(thisTran).getFirstRow(thisTran);
+        thisNode = aimTable.getRootNode(thisTran);
+        thisRowID = 0;
         return true;
     }
 
     // 游标移至末尾
     public boolean moveToLast(Transaction thisTran)
     {
-        thisRow = aimTable.getRootNode(thisTran).getLastRow(thisTran);
+        //TODO:游标移至末尾
         return true;
     }
 
     // 游标后移一条
     public boolean moveToNext(Transaction thisTran)
     {
-        if(thisRow.rightRowKey == null)
-        {
-            return false;
-        }
-        return moveToUnpacked(thisTran,thisRow.rightRowKey.getValue_s());
+        //TODO:游标后移一位
+        return true;
     }
 
     // 游标前移一条
     public boolean moveToPrevious(Transaction thisTran)
     {
-        if(thisRow.leftRowKey == null)
-        {
-            return false;
-        }
-        return moveToUnpacked(thisTran,thisRow.leftRowKey.getValue_s());
+        //TODO:游标前移一位
+        return true;
     }
 
     // 游标移至指定位
@@ -171,7 +167,7 @@ class TableCursor extends Cursor
     public boolean moveToUnpacked(Transaction thisTran,String key)
     {
         Cell keyCell = new Cell(key);
-        thisRow = aimTable.getRootNode(thisTran).getSpecifyRow(keyCell);
+        // TODO:游标移至指定位
         return true;
     }
 
@@ -180,7 +176,7 @@ class TableCursor extends Cursor
     public boolean moveToUnpacked(Transaction thisTran,Integer key)
     {
         Cell keyCell = new Cell(key.toString());
-        thisRow = aimTable.getRootNode(thisTran).getSpecifyRow(keyCell);
+        // TODO:游标移至指定位
         return true;
     }
 
@@ -189,15 +185,15 @@ class TableCursor extends Cursor
     public boolean moveToUnpacked(Transaction thisTran,Double key)
     {
         Cell keyCell = new Cell(key.toString());
-        thisRow = aimTable.getRootNode(thisTran).getSpecifyRow(keyCell);
+        // TODO:游标移至指定位
         return true;
     }
 
     // 删除本条
     public boolean delete(Transaction thisTran)
     {
-        aimTable.getRootNode(thisTran).deleteRow(new Cell(getKeyCell_s()));
-        moveToUnpacked(thisTran,thisRow.rightRowKey.getValue_s());
+        aimTable.getRootNode(thisTran).deleteRow(new Cell(getKeyCell_s()),thisTran);
+        //TODO:游标移至下一位
         return true;
     }
 
@@ -205,14 +201,13 @@ class TableCursor extends Cursor
     public boolean insert(Transaction thisTran,List<String> stringList)
     {
         Row row = new Row(stringList);
-        thisRow = row;
-        return aimTable.getRootNode(thisTran).insertRow(thisRow);
+        thisRowID = aimTable.getRootNode(thisTran).insertRow(row,thisTran);
     }
 
     // 获取本条内容，字符串值
     public List<String> getData()
     {
-        return thisRow.getStringList();
+        return thisRowID.getStringList();
     }
 
     // 调整本条内容
