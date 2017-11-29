@@ -3,6 +3,9 @@ package npu.zunsql.tree;
 import npu.zunsql.cache.CacheMgr;
 import npu.zunsql.cache.Page;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.nio.ByteBuffer;
 import java.util.List;
 /**
@@ -38,16 +41,20 @@ public class Node {
     // 每个Node表示一个Page
     private Page pageOne;
 
+
     protected Node(int thisPageID, CacheMgr cacheManager, Transaction thisTran)
     {
         this.cacheManager = cacheManager;
         pageOne = this.cacheManager.readPage(thisTran.tranNum, thisPageID);
         // TODO:根据thisPage加载本Node信息
+
+
+
+
     }
 
     // 根据Node的属性构造Node。
-    private Node(List<Row> thisRowList, List<Integer> thisSonList, int thisOrder, CacheMgr cacheManager, Transaction thisTran)
-    {
+    private Node(List<Row> thisRowList, List<Integer> thisSonList, int thisOrder, CacheMgr cacheManager, Transaction thisTran) throws IOException {
         ByteBuffer buffer = ByteBuffer.allocate(Page.PAGE_SIZE);
         rowList = thisRowList;
         sonNodeList = thisSonList;
@@ -63,33 +70,48 @@ public class Node {
 
         // 维护自身排位信息。
         order = thisOrder;
-        // TODO:序列化信息至buffer
-        pageOne = new Page(buffer);
+        // 序列化信息至buffer
+        intoBytes(thisTran);
+
+    }
+
+    protected void intoBytes (Transaction thisTran) throws IOException {
+        byte [] bytes=new byte[Page.PAGE_SIZE] ;
+        ByteArrayOutputStream byt=new ByteArrayOutputStream();
+        ObjectOutputStream obj=new ObjectOutputStream(byt);
+        obj.writeObject(sonNodeList);
+        obj.writeObject(fatherNodeID);
+        obj.writeObject(order);
+        obj.writeObject(rowList);
+        bytes=byt.toByteArray();
+        ByteBuffer thisBufer = pageOne.getPageBuffer();
+        thisBufer.put(bytes);
         cacheManager.writePage(thisTran.tranNum,pageOne);
     }
 
-    private boolean setFather(int ID,Transaction thisTran)
-    {
+
+
+    private boolean setFather(int ID,Transaction thisTran) throws IOException {
         fatherNodeID = ID;
 
-        // TODO：维护page信息
+        // 维护page信息
+        intoBytes(thisTran);
 
         return true;
     }
 
 
-    private boolean setOrder(int or, Transaction thisTran)
-    {
+    private boolean setOrder(int or, Transaction thisTran) throws IOException {
         order = or;
 
-        // TODO：维护page信息
+        // 维护page信息
+        intoBytes(thisTran);
 
         return true;
     }
 
     // 分裂除根节点外的其他节点。
-    private Node devideNode(Transaction thisTran)
-    {
+    private Node devideNode(Transaction thisTran) throws IOException {
         List<Row> rightRow;
         List<Integer> rightNode;
         rightRow = rowList.subList(M/2 + 1, M);
@@ -97,14 +119,14 @@ public class Node {
         rightNode = sonNodeList.subList(M/2 + 1,M + 1);
         sonNodeList = sonNodeList.subList(0, M/2 + 1);
 
-        //TODO:维护本page信息
+        //维护本page信息
+        intoBytes(thisTran);
 
         return new Node(rightRow, rightNode, order + 1, cacheManager, thisTran);
     }
 
     // 分裂根节点
-    private boolean rootDevideNode(Transaction thisTran)
-    {
+    private boolean rootDevideNode(Transaction thisTran) throws IOException {
         List<Row> leftRow;
         List<Row> rightRow;
         List<Integer> leftNode;
@@ -119,14 +141,14 @@ public class Node {
         newSonList.add(new Node(rightRow, rightNode,1, cacheManager, thisTran).pageOne.getPageID());
         sonNodeList = newSonList;
 
-        //TODO:维护本page信息
+        //维护本page信息
+        intoBytes(thisTran);
 
         return true;
     }
 
     // 调整本节点使其顺序为sonOrder的儿子row数量恢复至M/2
-    private boolean adjustNode(int sonOrder, Transaction thisTran)
-    {
+    private boolean adjustNode(int sonOrder, Transaction thisTran) throws IOException {
         Node thisSonNode = new Node(sonNodeList.get(sonOrder),cacheManager,thisTran);
 
         // 排除最大值边界越界情况，向左下合并
@@ -138,7 +160,8 @@ public class Node {
                 thisSonNode.insertRow(rowList.get(sonOrder),thisTran);
                 rightSonNode.deleteRow(rowList.get(order).getCell(0),thisTran);
                 rowList.set(sonOrder, rightSonNode.getFirstRow(thisTran));
-                //TODO:维护本page信息
+                //维护本page信息
+                intoBytes(thisTran);
                 return true;
             }
         }
@@ -152,7 +175,8 @@ public class Node {
                 thisSonNode.insertRow(rowList.get(sonOrder - 1),thisTran);
                 leftSonNode.deleteRow(rowList.get(order).getCell(0),thisTran);
                 rowList.set(sonOrder - 1, leftSonNode.getLastRow(thisTran));
-                //TODO:维护本page信息
+                //维护本page信息
+                intoBytes(thisTran);
                 return true;
             }
         }
@@ -162,8 +186,7 @@ public class Node {
     }
 
     // 在本节点中添加子节点，分别添加row和对应的SonNode。
-    private boolean addNode(Row row, Node node, Transaction thisTran)
-    {
+    private boolean addNode(Row row, Node node, Transaction thisTran) throws IOException {
         // 用于记录是否添加了这个节点。
         boolean addOrNot = false;
         for (int i = 0; i < rowList.size(); i++)
@@ -174,7 +197,8 @@ public class Node {
             {
                 rowList.add(i, row);
                 sonNodeList.add(i, node.pageOne.getPageID());
-                // TODO:维护page信息。
+                // 维护page信息。
+                intoBytes(thisTran);
                 thisNode.setFather(pageOne.getPageID(),thisTran);
                 addOrNot = true;
             }
@@ -185,7 +209,8 @@ public class Node {
         {
             rowList.add(row);
             sonNodeList.add(sonNodeList.size() - 2, node.pageOne.getPageID());
-            // TODO:维护page信息。
+            // 维护page信息。
+            intoBytes(thisTran);
             node.setOrder(sonNodeList.size() - 1,thisTran);
             node.setFather(pageOne.getPageID(),thisTran);
         }
@@ -211,8 +236,7 @@ public class Node {
         }
     }
 
-    private boolean deleteNode(int sonOrder,Transaction thisTran)
-    {
+    private boolean deleteNode(int sonOrder,Transaction thisTran) throws IOException {
         Row thisRow;
         if (sonOrder < sonNodeList.size() - 1)
         {
@@ -221,7 +245,8 @@ public class Node {
             rightNode.insertRow(thisRow,thisTran);
             rowList.remove(sonOrder);
             sonNodeList.remove(sonOrder);
-            // TODO:维护page信息
+            // 维护page信息
+            intoBytes(thisTran);
             for (int i = sonOrder; i < sonNodeList.size(); i++)
             {
                 new Node(sonNodeList.get(i),cacheManager,thisTran).setOrder(i,thisTran);
@@ -234,7 +259,8 @@ public class Node {
                     {
                         rowList = new Node(sonNodeList.get(0),cacheManager,thisTran).rowList;
                         sonNodeList = new Node(sonNodeList.get(0),cacheManager,thisTran).sonNodeList;
-                        // TODO:维护page信息
+                        // 维护page信息
+                        intoBytes(thisTran);
                         return true;
                     }
                     else
@@ -260,7 +286,8 @@ public class Node {
 
             rowList.remove(sonOrder - 1);
             sonNodeList.remove(sonOrder);
-            // TODO:维护page信息
+            // 维护page信息
+            intoBytes(thisTran);
             for (int i = sonOrder; i < sonNodeList.size(); i++)
             {
                 new Node(sonNodeList.get(i),cacheManager,thisTran).setOrder(i,thisTran);
@@ -273,7 +300,8 @@ public class Node {
                     {
                         rowList = new Node(sonNodeList.get(0),cacheManager,thisTran).rowList;
                         sonNodeList = new Node(sonNodeList.get(0),cacheManager,thisTran).sonNodeList;
-                        // TODO:维护page信息
+                        // 维护page信息
+                        intoBytes(thisTran);
                         return true;
                     }
                     else
@@ -293,8 +321,7 @@ public class Node {
         }
     }
 
-    public boolean insertRow(Row row,Transaction thisTran)
-    {
+    public boolean insertRow(Row row,Transaction thisTran) throws IOException {
         boolean insertOrNot = false;
         int insertNumber = 0;
         for (int i = 0; i < rowList.size(); i++)
@@ -317,7 +344,8 @@ public class Node {
         if (sonNodeList == null)
         {
             rowList.add(insertNumber,row);
-            // TODO:维护page信息
+            // 维护page信息
+            intoBytes(thisTran);
             if (rowList.size() <= M)
             {
                 return true;
@@ -340,8 +368,7 @@ public class Node {
         }
     }
 
-    public boolean deleteRow(Cell key,Transaction thisTran)
-    {
+    public boolean deleteRow(Cell key,Transaction thisTran) throws IOException {
         boolean deleteOrNot = false;
         int deleteNumber = 0;
         for (int i = 0; i < rowList.size(); i++)
@@ -352,7 +379,8 @@ public class Node {
                 if (sonNodeList == null)
                 {
                     rowList.remove(i);
-                    // TODO:维护page信息
+                    // 维护page信息
+                    intoBytes(thisTran);
                     if (rowList.size() < M/2)
                     {
                         if (fatherNodeID < 0)
@@ -361,7 +389,8 @@ public class Node {
                             {
                                 rowList = new Node(sonNodeList.get(0),cacheManager,thisTran).rowList;
                                 sonNodeList = new Node(sonNodeList.get(0),cacheManager,thisTran).sonNodeList;
-                                // TODO:维护page信息
+                                // 维护page信息
+                                intoBytes(thisTran);
                                 return true;
                             }
                             else
@@ -383,7 +412,8 @@ public class Node {
                 {
                     Row tempRow = getFirstRow(thisTran);
                     rowList.set(i, tempRow);
-                    // TODO:维护page信息
+                    // 维护page信息
+                    intoBytes(thisTran);
                     return new Node(sonNodeList.get(i + 1),cacheManager,thisTran).deleteRow(tempRow.getCell(0),thisTran);
                 }
             }
