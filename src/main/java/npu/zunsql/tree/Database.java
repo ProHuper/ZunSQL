@@ -16,13 +16,15 @@ public class Database
     //表示dataBase的名字
     private String dBName;
 
+    //系统表,用于存储表名和对应pageID
     private Table master;
 
     // page层的Mgr，用于对Page层进行操作。
     private CacheMgr cacheManager;
 
-    // 首先新建一个Page，然后进行相关Page写操作。
-    protected Database(String name) throws IOException, ClassNotFoundException {
+    // 根据dbname构造数据库缓存对象
+    protected Database(String name) throws IOException, ClassNotFoundException
+    {
         dBName = name;
         cacheManager = new CacheMgr(dBName);
 
@@ -46,7 +48,7 @@ public class Database
         }
     }
 
-
+    // 构造一个系统表
     private boolean addMaster(Transaction initTran) throws IOException, ClassNotFoundException {
         // 添加master table
         Column keyColumn = new Column(BasicType.String,"tableName",0);
@@ -61,6 +63,7 @@ public class Database
         return true;
     }
 
+    // 关闭数据库
     public boolean colse()
     {
         cacheManager.close();
@@ -139,7 +142,7 @@ public class Database
         return new View(sList,tList,rowStringList);
     }
 
-
+    // 删除一张表
     public boolean dropTable(String tableName,Transaction thisTran) throws IOException, ClassNotFoundException
     {
         Cursor masterCursor = master.createCursor(thisTran);
@@ -152,6 +155,7 @@ public class Database
         return true;
     }
 
+    // 删除一张表
     public boolean dropTable(Table table,Transaction thisTran) throws IOException, ClassNotFoundException
     {
         return dropTable(table.tableName,thisTran);
