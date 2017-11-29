@@ -20,6 +20,7 @@ public class Table implements TableReader ,Serializable
     protected String tableName;
 
     protected Column keyColumn;
+
     protected List<Column> columns;
 
     protected LockType lock;
@@ -37,7 +38,7 @@ public class Table implements TableReader ,Serializable
         return cacheManager.writePage(myTran.tranNum, pageOne);
     }
 
-    private void intoBytes() throws IOException {
+    private void intoBytes(Transaction thisTran) throws IOException {
         byte [] bytes=new byte[Page.PAGE_SIZE] ;
         ByteArrayOutputStream byt=new ByteArrayOutputStream();
 
@@ -47,11 +48,10 @@ public class Table implements TableReader ,Serializable
         obj.writeObject(columns);
         obj.writeObject(lock);
         obj.writeObject(rootNodePage);
-        obj.writeObject(cacheManager);
-        obj.writeObject(pageOne);
         bytes=byt.toByteArray();
         ByteBuffer thisBufer = pageOne.getPageBuffer();
         thisBufer.put(bytes);
+        cacheManager.writePage(thisTran.tranNum,pageOne);
 
     }
 
@@ -76,8 +76,6 @@ public class Table implements TableReader ,Serializable
         this.columns=(List<Column>)objTable.readObject();
         this.lock=(LockType)objTable.readObject();
         this.rootNodePage=(int)objTable.readObject();
-        this.cacheManager=(CacheMgr) objTable.readObject();
-        this.pageOne=(Page)objTable.readObject();
 
 
     }
@@ -154,7 +152,7 @@ public class Table implements TableReader ,Serializable
     public boolean lock(Transaction thistran) throws IOException {
         lock = LockType.Locked;   //NULL
 
-        intoBytes();
+        intoBytes(thistran);
 
         while(!writeMyPage(thistran));
         return true;
@@ -163,7 +161,7 @@ public class Table implements TableReader ,Serializable
     public boolean unLock(Transaction thistran) throws IOException {
         lock = LockType.Shared;   //NULL
 
-        intoBytes();
+        intoBytes(thistran);
         while(!writeMyPage(thistran));
         return true;
     }

@@ -90,8 +90,22 @@ public class Database
     //根据传来的表名，主键以及其他的列名来新建一个表
     public Table createTable(String tableName, String keyName, List<String> columnNameList,List<BasicType> tList, Transaction thisTran) throws IOException, ClassNotFoundException {
         ByteBuffer tempBuffer = ByteBuffer.allocate(Page.PAGE_SIZE);
+
+        byte [] bytes=new byte[Page.PAGE_SIZE] ;
+        ByteArrayOutputStream byt=new ByteArrayOutputStream();
+
         // 将表头信息和首节点信息存入ByteBuffer中 新建的表锁应该为什么锁
-        LockType lock=LockType.Shared;
+        LockType lock=LockType.Locked;
+
+        ObjectOutputStream obj=new ObjectOutputStream(byt);
+        obj.writeObject(tableName);
+        obj.writeObject(keyName);
+        obj.writeObject(columnNameList);
+        obj.writeObject(lock);
+        obj.writeObject(-1);
+        obj.writeObject(cacheManager);
+        bytes=byt.toByteArray();
+        tempBuffer.put(bytes);
 
         Page tablePage = new Page(tempBuffer);
         cacheManager.writePage(thisTran.tranNum,tablePage);
@@ -105,19 +119,7 @@ public class Database
         masterCursor.insert(thisTran,masterRow_s);
 
 
-        byte [] bytes=new byte[Page.PAGE_SIZE] ;
-        ByteArrayOutputStream byt=new ByteArrayOutputStream();
 
-        ObjectOutputStream obj=new ObjectOutputStream(byt);
-        obj.writeObject(tableName);
-        obj.writeObject(keyName);
-        obj.writeObject(columnNameList);
-        obj.writeObject(lock);
-        obj.writeObject(-1);
-        obj.writeObject(cacheManager);
-        obj.writeObject(tablePage);
-        bytes=byt.toByteArray();
-        tablePage.getPageBuffer().put(bytes);
 
         return new Table(pageID,cacheManager,thisTran);   //NULL
     }
