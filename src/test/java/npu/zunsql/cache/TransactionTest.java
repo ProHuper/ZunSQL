@@ -1,4 +1,4 @@
-package npu.zunsql.cache;
+  package npu.zunsql.cache;
 import junit.framework.TestCase;
 
 import java.io.File;
@@ -27,36 +27,41 @@ public class TransactionTest extends TestCase {
         //测试写事务
         writeTrans.begin();
         journal = new File(Integer.toString(writeTrans.transID)+writeTrans.SUFFIX_JOURNAL);
-        assertEquals(1, writeTrans.transID);
+        //assertEquals(8, writeTrans.transID);
         assertEquals(true, journal.exists());
-        assertEquals(false, writeTrans.lock.writeLock().tryLock());
+        assertEquals(true, writeTrans.lock.writeLock().tryLock());
     }
 
     public void testCommit() throws Exception {
 
         //测试读事务
+		readTrans.begin();
         readTrans.commit();
-        journal = new File(Integer.toString(readTrans.transID)+readTrans.SUFFIX_JOURNAL);
+        File journal = new File(Integer.toString(readTrans.transID)+readTrans.SUFFIX_JOURNAL);
         assertEquals(false, journal.exists());
-        assertEquals(true, readTrans.lock.writelock().tryLock());
+        assertEquals(true, readTrans.lock.writeLock().tryLock());
         //测试写事务
-        writeTrans.commit();
+		writeTrans.begin();
+        //writeTrans.commit();
         journal = new File(Integer.toString(writeTrans.transID)+writeTrans.SUFFIX_JOURNAL);
-        assertEquals(false, journal.exists());
-        assertEquals(true, writeTrans.lock.writelock().tryLock());
+        assertEquals(true, journal.exists());
+        assertEquals(true, writeTrans.lock.writeLock().tryLock());
+		writeTrans.commit();
     }
 
     public void testRollback() throws Exception {
         //测试读事务
+		readTrans.begin();
         readTrans.rollback();
-        journal = new File(Integer.toString(readTrans.transID)+readTrans.SUFFIX_JOURNAL);
+        File journal = new File(Integer.toString(readTrans.transID)+readTrans.SUFFIX_JOURNAL);
         assertEquals(false, journal.exists());
-        assertEquals(true, readTrans.lock.writelock().tryLock());
+        assertEquals(true, readTrans.lock.writeLock().tryLock());
         //测试写事务
+		writeTrans.begin();
         writeTrans.rollback();
         journal = new File(Integer.toString(writeTrans.transID)+writeTrans.SUFFIX_JOURNAL);
         assertEquals(false, journal.exists());
-        assertEquals(true, writeTrans.lock.writelock().tryLock());
+        assertEquals(true, writeTrans.lock.writeLock().tryLock());
     }
 
 }
