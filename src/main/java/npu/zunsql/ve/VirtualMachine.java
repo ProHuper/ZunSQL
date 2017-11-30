@@ -2,269 +2,597 @@ package npu.zunsql.ve;
 
 import npu.zunsql.tree.*;
 
-import java.lang.reflect.Array;
+import java.io.IOException;
 import java.util.*;
 
 public class VirtualMachine
 {
-	Map<String,QueryResult> tables;
-	List<ByteCode> filters;
-	List<String> selectedColumns;
-	List<AttrInstance> record;
-	List<Column> columns;
-	List<ByteCode> instuctions;
+	//作为过滤器来对记录进行筛选
+	private List<EvalDiscription> filters;
+	//存储被选出的列
+    private List<String> selectedColumns;
+    //存储要插入的记录
+    private List<AttrInstance> record;
+    //存储要创建表的各项表头，该数据结构仅用于创建表
+    private List<Column> columns;
+    //存储execute指令执行后的查询结构，仅select指令对应的操作会使得该集合非空
+    private QueryResult result;
+    //要操作的对象表名
+    private String targetTable;
+    //创建表时主键的名称存储在该变量中
+    private String pkName;
+    //要更新的属性名称，顺序必须与下一个变量的顺序一致
+    private List<String> updateAttrs;
+    //要更新的属性值，顺序必须与上一个变量的顺序一致
+    private List<List<EvalDiscription> > updateValues;
+    //临时变量
+    private List<EvalDiscription> singleUpdateValue;
+    //记录本次execute将执行的命令
+    private Activity activity;
+    //作为join操作的结果集
+    private QueryResult joinResult;
+    //事务句柄
+    private Transaction tran;
+    //等待连接的表名
+    private List<String> waitingJoin;
+
+    //todo modified
+    private boolean isJoin = false;
+    private int joinIndex = 0;
 
 
-    String targetTable;
-    String pkName;
-    String updateAttr;
-    String updateValue;
-    String tableName;
-    Activity activity;
-    QueryResult result;
-    QueryResult joinResult;
+    private boolean suvReadOnly;
+	private boolean recordReadOnly;
+	private boolean columnsReadOnly;
+	private boolean selectedColumnsReadOnly;
+    private Database db;
 
-	boolean filtersReadOnly;
-	boolean recordReadOnly;
-	boolean columnsReadOnly;
-	boolean selectedColumnsReadOnly;
-
-    Database db;
-
-	public QueryResult VirtualMachine()
+	public VirtualMachine(Database pdb)
 	{
-		filtersReadOnly=true;
 		recordReadOnly=true;
 		columnsReadOnly=true;
 		selectedColumnsReadOnly=true;
-		result=null;
+		suvReadOnly=true;
+
+		tran=null;
+        result=null;
 		activity=null;
 		targetTable=null;
+		joinResult=null;
 
-        //todo：这里需要约定数据库文件的名称，暂时定为db
-        db=new Database("db");
-        return result;
+        waitingJoin=new ArrayList<>();
+		filters=new ArrayList<>();
+		selectedColumns=new ArrayList<>();
+		record=new ArrayList<>();
+		columns=new ArrayList<>();
+		updateAttrs =new ArrayList<>();
+		updateValues =new ArrayList<>();
+		singleUpdateValue=new ArrayList<>();
+
+		pkName=null;
+        db=pdb;
 	}
 
-	public QueryResult runAll(List<ByteCode> instuctions)
-	{
-		for(ByteCode instruction: instuctions)
-		{
-			return run(instruction);
-		}
-		return result;
-	}
-
-    public QueryResult run(ByteCode instruction)
+    public QueryResult run(Instruction instruction) throws IOException
     {
         OpCode opCode = instruction.opCode;
         String p1 = instruction.p1;
         String p2 = instruction.p2;
         String p3 = instruction.p3;
 
-        switch(opCode)
+        //所有操作都改为延时操作，即在execute后生效，其他命令只会向VM中填充信息
+        //特例是commit指令和rollback指令会立即执行
+        switch (opCode)
         {
-
+            //下面是关于事务的处理代码
             case Transaction:
-
+                //如果这里不能提供Transaction的类型，那么只能在execute的时候由虚拟机来自动推断
+                //这里不做任何处理，因为上一层并没有交给本层事务类型
                 break;
 
             case Commit:
-                //todo：调用下层方法
+                try {
+                    tran.Commit();
+                }
+                catch (IOException e){
+                    Util.log("提交失败");
+                    throw e;
+                }
                 break;
 
             case Rollback:
-                //todo：调用下层方法
+                tran.RollBack();
                 break;
 
-            case CreateDB:
-                //todo：调用下层方法
-                break;
-
-            case DropDB:
-                //todo：调用下层方法
-                break;
-
+            //下面是创建表的处理代码
             case CreateTable:
-                columnsReadOnly=true;
-                break;
-
-            case DropTable:
-                //todo：调用下层方法
-                break;
-
-            case Insert:
-                activity=Activity.Insert;
-                if(targetTable==null)
-                {
-                    targetTable=p3;
-                }
-                else
-                {
-                    log("Can not operate two tables at the same time");
-                    //todo:throw
-                }
-
-            case Delete:
-                activity=Activity.Delete;
-                targetTable=p3;
-                break;
-
-            case Select:
-                activity=Activity.Select;
-                targetTable=p3;
-                break;
-
-            case Update:
-                activity=Activity.Update;
+                activity=Activity.CreateTable;
+                columnsReadOnly = false;
                 targetTable=p3;
                 break;
 
             case AddCol:
-                if(columnsReadOnly==true)
-                {
-                    log("error");
-                    //throw
-                }
-                else
-                {
-                    columns.add(new Column(p1,p2));
-                }
+                columns.add(new Column(p1, p2));
                 break;
 
             case BeginPK:
                 //在只支持一个属性作为主键的条件下，此操作本无意义
                 //但指定主键意味着属性信息输入完毕，因此将columnsReadOnly置为true
-                columnsReadOnly=true;
+                columnsReadOnly = true;
                 break;
 
             case AddPK:
                 //在只支持一个属性作为主键的条件下，直接对pkName赋值即可
-                pkName=p1;
+                pkName = p1;
                 break;
 
             case EndPK:
                 //在只支持一个属性作为主键的条件下，此操作无意义
+                //暂时将此命令作为createTable结束的标志
                 break;
 
+            //下面是删除表的操作
+            case DropTable:
+                activity=Activity.DropTable;
+                targetTable=p3;
+                break;
+
+            //下面是插入操作，这是个延时操作
+            case Insert:
+                activity = Activity.Insert;
+                targetTable=p3;
+                break;
+
+            //下面是删除操作，这是个延时操作
+            case Delete:
+                activity = Activity.Delete;
+                targetTable = p3;
+                break;
+
+            //下面是选择操作，这是个延时操作
+            case Select:
+                activity = Activity.Select;
+                targetTable = p3;
+                break;
+
+            //下面是更新操作，这是个延时操作
+            case Update:
+                activity = Activity.Update;
+                targetTable = p3;
+                break;
+
+            //下面是关于插入一条记录的内容的操作
             case BeginItem:
-                recordReadOnly=false;
+                recordReadOnly = false;
                 break;
 
             case AddItemCol:
-                if(recordReadOnly==false)
-                {
-                    record.add(new AttrInstance(p1,p2,p3));
-                }
-                else
-                {
-                    log("Semantic error");
-                    //todo:throw
-                }
+                record.add(new AttrInstance(p1, p2, p3));
 
             case EndItem:
-                recordReadOnly=true;
+                recordReadOnly = true;
                 break;
 
+            //关于选择器的选项，这里借助表达式实现，仅在最后将记录的表达式传给filters
             case BeginFilter:
-                filtersReadOnly=false;
-                break;
-
-            case Filter:
-                if(filtersReadOnly==false)
-                {
-                    filters.add(new ByteCode(opCode,p1,p2,p3));
-                }
-                else
-                {
-                    log("Semantic error");
-                    //todo:throw
-                }
+                suvReadOnly = false;
+                singleUpdateValue=new ArrayList<>();
                 break;
 
             case EndFilter:
-                filtersReadOnly=true;
+                filters=singleUpdateValue;
+                suvReadOnly = true;
                 break;
 
+            //下面是关于select选择的属性的设置
             case BeginColSelect:
-                selectedColumnsReadOnly=false;
+                selectedColumnsReadOnly = false;
                 break;
 
             case AddColSelect:
-                if(selectedColumnsReadOnly==true)
-                {
-                    log("error");
-                    //throw
-                }
-                else
-                {
-                    selectedColumns.add(p1);
-                }
+                selectedColumns.add(p1);
                 break;
 
             case EndColSelect:
-                selectedColumnsReadOnly=true;
+                selectedColumnsReadOnly = true;
                 break;
 
+            //下面是处理选择的表的连接操作的代码
             case BeginJoin:
                 //接收到join命令，清空临时表
-                joinResult=null;
+                joinResult = null;
+                isJoin = true;
+                joinIndex = 0;
                 break;
 
             case AddTable:
-                tableName=p1;
+                targetTable = p1;
                 //调用下层方法，加载p1表，将自然连接的结果存入joinResult
-                join(tableName);
+                join(targetTable);
                 break;
 
             case EndJoin:
-                //todo：调用下层方法建树
+                break;
 
-
+            //下面的代码设置update要更新的值，形式为colName=Expression
             case Set:
-                updateAttr=p1;
-                updateValue=p3;
+                updateAttrs.add(p1);
                 break;
 
-            case And:
-
+            case BeginExpression:
+                suvReadOnly=false;
+                singleUpdateValue=new ArrayList<>();
                 break;
 
-            case Or:
-                //todo
+            case EndExpression:
+                updateValues.add(singleUpdateValue);
+                suvReadOnly=true;
                 break;
 
-            case Not:
-                //todo
+            //记录Expression描述的代码
+            case Operand:
+                singleUpdateValue.add(new EvalDiscription(opCode,p1,p2));
+                break;
+
+            case Operator:
+                singleUpdateValue.add(new EvalDiscription(OpCode.valueOf(p1),null,null));
                 break;
 
             case Execute:
-                //todo
+                execute();
                 break;
 
             default:
-                log("No such bytecode: "+opCode+" "+p1+" "+p2+" "+p3);
+                Util.log("没有这样的字节码: " + opCode + " " + p1 + " " + p2 + " " + p3);
                 break;
 
         }
         return result;
     }
 
-    private void log(String info)
-    {
-        System.out.println(info);
+    private boolean execute() {
+        if(targetTable==null) {
+            Util.log("没有指定要操作的表!");
+        }
+        else {
+            switch (activity){
+                case Select:
+                    select();
+                    break;
+                case Delete:
+                    delete();
+                    break;
+                case Update:
+                    update();
+                    break;
+                case Insert:
+                    insert();
+                    break;
+                case CreateTable:
+                    createTable();
+                    break;
+                case DropTable:
+                    dropTable();
+                    break;
+                default:
+                    break;
+            }
+        }
+        return true;
+    }
+
+    private QueryResult dropTable(){
+        tran=db.beginWriteTrans();
+        //todo modified.
+        if(db.drop(tran)==false){
+            Util.log("删除表失败");
+            return new QueryResult(false);
+        }
+        else{
+            return new QueryResult(true);
+        }
+    }
+    private QueryResult createTable(){
+	    //需要开启一个写事务
+	    tran=db.beginWriteTrans();
+
+	    //检索主键 unused because it doesn't matter.
+        BasicType pkType;
+        for(Column x:columns){
+            if(x.getColumnName()==pkName){
+                switch (x.getColumnType()){
+                    case "String":
+                        pkType = BasicType.String;
+                        break;
+                    case "Integer":
+                        pkType = BasicType.Integer;
+                        break;
+                    case "Float":
+                        pkType = BasicType.Float;
+                        break;
+                }
+            }
+        }
+
+        //将ve的Column重构为tree的Column
+//        List<npu.zunsql.tree.Column> tColumns=new ArrayList<>();
+//        for(Column item:columns){
+//            BasicType type= BasicType.String;
+//            if(item.getColumnType()=="Integer"){
+//                type= BasicType.Integer;
+//            }
+//            else if(item.getColumnType()=="Float"){
+//                type= BasicType.Float;
+//            }
+//            tColumns.add(new npu.zunsql.tree.Column(type,item.getColumnName()));
+//        }
+
+        List<String> headerName = new ArrayList<>();
+        List<BasicType> headerType = new ArrayList<>();
+        for(Column n: columns){
+            headerName.add(n.ColumnName);
+            switch (n.getColumnType()){
+                case "String":
+                    headerType.add(BasicType.String);
+                    break;
+                case "Float":
+                    headerType.add(BasicType.Float);
+                    break;
+                case "Integer":
+                    headerType.add(BasicType.Integer);
+            }
+        }
+
+        if(null!=db.createTable(targetTable, pkName, headerName, headerType,tran)){
+           return new QueryResult(true);
+        }
+        else{
+            return new QueryResult(false);
+        }
+
+    }
+    /**
+     *检查当前记录是否满足where子句的条件
+     * @param p 当前表上的指针
+     * @return 满足条件返回true，否则返回false
+     */
+    private boolean check(Cursor p) {
+	    //如果没有where子句，那么返回true，即对所有记录都执行操作
+	    if(filters.size()==0){
+	        return true;
+        }
+        //todo  modifide.
+        UnionOperand ans;
+        if(isJoin)
+            ans = eval(filters, joinIndex);
+        else
+            ans = eval(filters, p);
+	    if(ans.getType()==BasicType.String){
+	        Util.log("where子句的表达式返回值不能为String");
+	        //返回false,此返回值没有意义
+            return false;
+        }
+        else if(Math.abs(Double.valueOf(ans.getValue()))<1e-10){
+	        return false;
+        }
+        else{
+            return true;
+        }
+    }
+
+    private void select(){
+        tran=db.beginReadTrans();
+	    //构造结果集的表头
+	    List<Column> selected=new ArrayList<>();
+	    List<String> temp;
+	    for(String colName:selectedColumns){
+            Column col=new Column(colName);
+            selected.add(col);
+        }
+        result=new QueryResult(selected);
+
+        Cursor p=db.getTable(targetTable,tran).createCursor(tran);
+        //todo for View modified.
+        if(isJoin){
+            temp = db.getTable(targetTable,tran).getColumns();
+
+            //todo modified 用于joinResult的循环匹配。
+            for(int k = 0; k < joinResult.getRes().size(); k++,joinIndex++){
+                if(check(null)){
+                    List<String> ansRecord=new ArrayList<>();
+                    for(int i = 0; i < temp.size(); i++){
+                        for(int j =0; j < selected.size(); j++){
+                            if(selected.get(j).getColumnName().equals(temp.get(i))){
+                                ansRecord.add(joinResult.getRes().get(k).get(i));
+                            }
+                        }
+                    }
+                    result.addRecord(ansRecord);
+                }
+            }
+        }
+
+        else{
+            temp = joinResult.getHeaderString();
+            while(p!=null){
+                if(check(p)){
+                    List<String> ansRecord=new ArrayList<>();
+                    for(int i = 0; i < temp.size(); i++){
+                        for(int j =0; j < selected.size(); j++){
+                            if(selected.get(j).getColumnName().equals(temp.get(i))){
+                                ansRecord.add(p.getData().get(i));
+                            }
+                        }
+                    }
+                    result.addRecord(ansRecord);
+                }
+                p.moveToNext(tran);
+            }
+        }
+    }
+    private void delete(){
+        tran=db.beginWriteTrans();
+
+        //todo 是否还有全表删除？
+//        if(filters.size()==0){
+//            db.getTable(targetTable,tran).clear(tran);
+//        }
+        Cursor p=db.getTable(targetTable,tran).createCursor(tran);
+        while(p!=null){
+            if(check(p)){
+                p.delete(tran);
+            }
+            else{
+                p.moveToNext(tran);
+            }
+        }
+    }
+
+    /**
+     * 对全表进行更新
+     */
+    private void update(){
+        tran = db.beginWriteTrans();
+        Cursor p = db.getTable(targetTable,tran).createCursor(tran);
+        List<String> header = db.getTable(targetTable,tran).getColumns();
+        while(p!=null){
+            List<String> row = p.getData();
+            if(check(p)){
+                //Todo modified.
+                for(int i = 0; i< updateAttrs.size(); i++){
+                    //查询要更新的属性的信息并创建cell对象来执行更新
+                    String name=record.get(i).attrName;
+                    for(String info:header){
+                        if(info.equals(name)){
+                            row.set(i,eval(updateValues.get(i),p).getValue());
+                        }
+                    }
+                }
+
+            }
+            p.setData(tran,row);
+            p.moveToNext(tran);
+        }
+    }
+
+    /**
+     * 将一条记录插入到表中
+     * 因为上层没有产生default，下层也未提供接口，因此这里每次只能插入一条完整的记录
+     */
+    private void insert(){
+        tran = db.beginWriteTrans();
+        List<String> colValues=new ArrayList<>();
+
+        for(AttrInstance item:record){
+            colValues.add(item.getValue());
+        }
+
+        db.getTable(targetTable,tran).createCursor(tran).insert(tran,colValues);
+    }
+
+    /**
+     * 确定一个字符串值的最小可承载类型
+     * @param strVal 要判断的值
+     * @return 最小的可承载类型
+     */
+    private static BasicType lowestType(String strVal){
+	    int dot=0;
+	    boolean alpha=false;
+	    for(int i=0;i<strVal.length();i++){
+	        char c=strVal.charAt(i);
+            if(c=='.'){
+                dot++;
+            }
+            else if(c>'9'||c<'0'){
+                alpha=true;
+                break;
+            }
+        }
+        if(alpha==true||dot>=2){
+	        return BasicType.String;
+        }
+        else if(dot==1){
+            return BasicType.Float;
+        }
+        else{
+            return BasicType.Integer;
+        }
+    }
+
+    /**
+     *根据表达式的描述求值
+     * @param evalDiscriptions 要计算的表达式描述
+     * @param p 计算时需要依赖的数据的指针
+     */
+    private  UnionOperand eval(List<EvalDiscription> evalDiscriptions,Cursor p){
+        Expression exp=new Expression();
+        List<String> info = db.getTable(targetTable,tran).getColumns();
+
+        for(int i=0;i<evalDiscriptions.size();i++) {
+            if(evalDiscriptions.get(i).cmd==OpCode.Operand){
+                if(evalDiscriptions.get(i).col_name!=null){
+
+                    for(int j = 0; j < info.size(); i++){
+                        if(info.get(j).equals(evalDiscriptions.get(i).col_name)){
+                            exp.addOperand(new UnionOperand(p.getColumnType(info.get(j)), p.getData().get(j)));
+                        }
+                    }
+
+                }
+                else{
+                    String val=evalDiscriptions.get(i).constant;
+                    BasicType cType= lowestType(val);
+                    exp.addOperand(new UnionOperand(cType,val));
+                }
+            }
+            else{
+                exp.applyOperator(evalDiscriptions.get(i).cmd);
+            }
+        }
+        return exp.getAns();
+    }
+
+    /**
+     * eval的重载，在下层不提供视图机制的时候用于处理临时表。
+     * */
+    private  UnionOperand eval(List<EvalDiscription> evalDiscriptions,int joinIndex){
+        Expression exp=new Expression();
+        List<String> infoJoin = joinResult.getHeaderString();
+
+        for(int i=0;i<evalDiscriptions.size();i++) {
+            if(evalDiscriptions.get(i).cmd==OpCode.Operand){
+                if(evalDiscriptions.get(i).col_name!=null){
+
+                    for(int j = 0; j < infoJoin.size(); i++){
+                        if(infoJoin.get(j).equals(evalDiscriptions.get(i).col_name)){
+                            exp.addOperand(new UnionOperand(joinResult.getHeader().get(j).getColumnTypeBasic()
+                                    ,joinResult.getRes().get(joinIndex).get(j)));
+                        }
+                    }
+
+                }
+                else{
+                    String val=evalDiscriptions.get(i).constant;
+                    BasicType cType= lowestType(val);
+                    exp.addOperand(new UnionOperand(cType,val));
+                }
+            }
+            else{
+                exp.applyOperator(evalDiscriptions.get(i).cmd);
+            }
+        }
+        return exp.getAns();
     }
 
     private void join(String tableName)
     {
-        Table table = db.getTable(tableName);
+        Table table = db.getTable(tableName,tran);
         List<List<String>> resList = joinResult.getRes();
         List<Column> resHead = joinResult.getHeader();
-        //TODO,两张表的公共属性。
         List<Column> fromTreeHead = new ArrayList<>();
-        table.getColumns().forEach(n -> fromTreeHead.add(new Column(n.getColumnName())));
+        table.getColumns().forEach(n -> fromTreeHead.add(new Column(n)));
 
-        Cursor cursor = new Cursor(table);
+        Cursor cursor = db.getTable(tableName,tran).createCursor(tran);
         JoinMatch matchedJoin = checkUnion(resHead, fromTreeHead);
         QueryResult copy = new QueryResult(matchedJoin.getJoinHead());
 
@@ -272,10 +600,7 @@ public class VirtualMachine
             List<String> tempRes = resList.get(i);
             while(cursor != null)
             {
-                Row row = cursor.GetData();
-                List<Cell> fromTreeCell = row.getCellList();
-                //TODO 转换。
-                List<String> fromTreeString = new ArrayList<>();
+                List<String> fromTreeString = cursor.getData();
                 List<String> copyTreeString = new ArrayList<>();
                 fromTreeString.forEach(n -> copyTreeString.add(n));
 
@@ -300,14 +625,14 @@ public class VirtualMachine
                     copy.getRes().add(line);
                 }
 
-                cursor.MovetoNext();
+                cursor.moveToNext(tran);
             }
         }
         joinResult = copy;
     }
 
     public JoinMatch checkUnion(List<Column> head1, List<Column> head2){
-	    List<Column> unionHead = new ArrayList<>();
+        List<Column> unionHead = new ArrayList<>();
         Map<Integer,Integer> unionUnder = new HashMap<>();
 
         head1.forEach(n -> unionHead.add(n));
@@ -318,16 +643,15 @@ public class VirtualMachine
             }
         }
 
-	    for(int i = 0; i < head1.size(); i++){
-	        int locate = head2.indexOf(head1.get(i));
-	        if(locate != -1){
-	            unionUnder.put(i,locate);
+        for(int i = 0; i < head1.size(); i++){
+            int locate = head2.indexOf(head1.get(i));
+            if(locate != -1){
+                unionUnder.put(i,locate);
             }
         }
 
-	    return new JoinMatch(unionHead, unionUnder);
+        return new JoinMatch(unionHead, unionUnder);
     }
-
 
     //这个方法只用于测试自然连接操作。
     public QueryResult forTestJoin(JoinMatch joinMatch, QueryResult input1, QueryResult input2){
@@ -367,4 +691,5 @@ public class VirtualMachine
         }
         return copy;
     }
+
 }
