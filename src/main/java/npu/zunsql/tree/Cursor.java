@@ -56,23 +56,23 @@ public abstract class Cursor
 
     // 游标移至指定位
     // 输入参数：key主键的整型值
-    public abstract boolean moveToUnpacked(Transaction thisTran,Integer key);
+    public abstract boolean moveToUnpacked(Transaction thisTran,Integer key) throws IOException, ClassNotFoundException;
 
     // 游标移至指定位
     // 输入参数：key主键的双精度值
-    public abstract boolean moveToUnpacked(Transaction thisTran,Double key);
+    public abstract boolean moveToUnpacked(Transaction thisTran,Double key) throws IOException, ClassNotFoundException;
 
     // 删除本条
-    public abstract boolean delete(Transaction thistran);
+    public abstract boolean delete(Transaction thistran) throws IOException, ClassNotFoundException;
 
     // 插入一条
-    public abstract boolean insert(Transaction thisTran,List<String> stringList);
+    public abstract boolean insert(Transaction thisTran,List<String> stringList) throws IOException, ClassNotFoundException;
 
     // 获取本条内容，字符串值
     public abstract List<String> getData();
 
     // 调整本条内容
-    public abstract boolean setData(Transaction thisTran,List<String> stringList);
+    public abstract boolean setData(Transaction thisTran,List<String> stringList) throws IOException, ClassNotFoundException;
 }
 
 
@@ -220,61 +220,84 @@ class TableCursor extends Cursor
         return false;
     }
 
+    private boolean moveToSon(Transaction thisTran,Cell key) throws IOException, ClassNotFoundException {
+        for(int i = 0; i < thisNode.getRowList().size(); i++)
+        {
+            if(key.equalTo(thisNode.getRowList().get(i).getCell(0)))
+            {
+                thisRowID = i;
+                return true;
+            }
+        }
+        for (int i = 0; i < thisNode.getRowList().size(); i++)
+        {
+            if(thisNode.getRowList().get(i).getCell(0).bigerThan(key))
+            {
+                thisNode = thisNode.getSpecialSonNode(i,thisTran);
+                return moveToSon(thisTran,key);
+            }
+        }
+        if(key.bigerThan(thisNode.getRowList().get(thisNode.getRowList().size()-1).getCell(0)))
+        {
+            thisNode = thisNode.getSpecialSonNode(thisNode.getRowList().size()-1,thisTran);
+            return moveToSon(thisTran,key);
+        }
+        return false;
+    }
+
     // 游标移至指定位
     // 输入参数：key主键的字符串值
-    public boolean moveToUnpacked(Transaction thisTran,String key) throws IOException, ClassNotFoundException {
-        Cell keyCell = new Cell(key);
-        thisNode=aimTable.getRootNode(thisTran);
-        while(keyCell.bigerThan(thisNode.getFirstRow(thisTran).getCell(0))&&thisNode.getLastRow(thisTran).getCell(0).bigerThan(keyCell))
-
-
-
-
+    public boolean moveToUnpacked(Transaction thisTran,String key) throws IOException, ClassNotFoundException
+    {
+        thisNode = aimTable.getRootNode(thisTran);
+        thisRowID = 0;
+        moveToSon(thisTran,new Cell(key));
         return true;
     }
 
     // 游标移至指定位
     // 输入参数：key主键的整型值
-    public boolean moveToUnpacked(Transaction thisTran,Integer key)
-    {
-        Cell keyCell = new Cell(key.toString());
-        // TODO:游标移至指定位
+    public boolean moveToUnpacked(Transaction thisTran,Integer key) throws IOException, ClassNotFoundException {
+        thisNode = aimTable.getRootNode(thisTran);
+        thisRowID = 0;
+        moveToSon(thisTran,new Cell(key.toString()));
         return true;
     }
 
     // 游标移至指定位
     // 输入参数：key主键的双精度值
-    public boolean moveToUnpacked(Transaction thisTran,Double key)
-    {
-        Cell keyCell = new Cell(key.toString());
-        // TODO:游标移至指定位
+    public boolean moveToUnpacked(Transaction thisTran,Double key) throws IOException, ClassNotFoundException {
+        thisNode = aimTable.getRootNode(thisTran);
+        thisRowID = 0;
+        moveToSon(thisTran,new Cell(key.toString()));
         return true;
     }
 
     // 删除本条
-    public boolean delete(Transaction thisTran)
-    {
-        aimTable.getRootNode(thisTran).deleteRow(new Cell(getKeyCell_s()),thisTran);
-        //TODO:游标移至下一位
+    public boolean delete(Transaction thisTran) throws IOException, ClassNotFoundException {
+        Cell keyCell = thisNode.getRow(thisRowID).getCell(0);
+        moveToNext(thisTran);
+        Cell nextCell = thisNode.getRow(thisRowID).getCell(0);
+        aimTable.getRootNode(thisTran).deleteRow(keyCell,thisTran);
+        moveToUnpacked(thisTran,nextCell.getValue_s());
         return true;
     }
 
     // 插入一条
-    public boolean insert(Transaction thisTran,List<String> stringList)
-    {
+    public boolean insert(Transaction thisTran,List<String> stringList) throws IOException, ClassNotFoundException {
         Row row = new Row(stringList);
-        thisRowID = aimTable.getRootNode(thisTran).insertRow(row,thisTran);
+        aimTable.getRootNode(thisTran).insertRow(row,thisTran);
+        return moveToUnpacked(thisTran,row.getCell(0).getValue_s());
     }
 
     // 获取本条内容，字符串值
     public List<String> getData()
     {
-        return thisRowID.getStringList();
+        return thisNode.getRow(thisRowID).getStringList();
     }
 
     // 调整本条内容
-    public boolean setData(Transaction thistran,List<String> stringList)
-    {
+    public boolean setData(Transaction thistran,List<String> stringList) throws IOException, ClassNotFoundException {
         if(!delete(thistran))
         {
             return false;

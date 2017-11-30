@@ -90,8 +90,7 @@ public class Table implements TableReader ,Serializable
         return keyColumn;
     }
 
-    protected Node getRootNode(Transaction thisTran)
-    {
+    protected Node getRootNode(Transaction thisTran) throws IOException, ClassNotFoundException {
         return new Node(rootNodePage, cacheManager, thisTran);
     }
 
