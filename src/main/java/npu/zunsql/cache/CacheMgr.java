@@ -382,10 +382,10 @@ public class CacheMgr
     }
 
 
-    /**将指定的某一页写回至内存
+    /**将指定的某一页写回至内存和文件
      *
      */
-    public boolean setPageToFile(Page tempPage, File file)
+    private boolean setPageToFile(Page tempPage, File file)
     {
         FileChannel fc = null;
         try
@@ -427,7 +427,7 @@ public class CacheMgr
     /**读取文件中的指定PageID页
      *
      */
-    public Page getPageFromFile(int pageID)
+    private Page getPageFromFile(int pageID)
     {
         Page tempPage = null;
         FileChannel fc = null;
