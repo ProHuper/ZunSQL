@@ -2,13 +2,15 @@ package npu.zunsql.cache;
 
 import java.io.Serializable;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Page implements Serializable
 {
-    public static final int HEAD_SIZE = 0;
     public static final int PAGE_SIZE = 1024;
 
     protected static int pageConut = 0;
+    protected static List<Integer> unusedID =  new ArrayList<Integer>();
 
     protected int pageID;
     protected ByteBuffer pageBuffer = null;
@@ -16,7 +18,14 @@ public class Page implements Serializable
     //
     public Page(ByteBuffer buffer)
     {
-        this.pageID = pageConut++;
+        //TODO:unusedLIst
+        if(this.unusedID.isEmpty())
+            this.pageID = pageConut++;
+        else
+        {
+            this.pageID = this.unusedID.indexOf(0);
+            this.unusedID.remove(0);
+        }
         this.pageBuffer = buffer;
     }
 
