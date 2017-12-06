@@ -73,8 +73,7 @@ public class VirtualMachine
         db=pdb;
 	}
 
-    public QueryResult run(Instruction instruction) throws IOException
-    {
+    public QueryResult run(Instruction instruction) throws IOException, ClassNotFoundException {
         OpCode opCode = instruction.opCode;
         String p1 = instruction.p1;
         String p2 = instruction.p2;
@@ -250,7 +249,7 @@ public class VirtualMachine
         return result;
     }
 
-    private boolean execute() {
+    private boolean execute() throws IOException, ClassNotFoundException {
         if(targetTable==null) {
             Util.log("没有指定要操作的表!");
         }
@@ -281,10 +280,10 @@ public class VirtualMachine
         return true;
     }
 
-    private QueryResult dropTable(){
+    private QueryResult dropTable() throws IOException, ClassNotFoundException {
         tran=db.beginWriteTrans();
         //todo modified.
-        if(db.drop(tran)==false){
+        if(db.dropTable(targetTable,tran)==false){
             Util.log("删除表失败");
             return new QueryResult(false);
         }
@@ -343,10 +342,20 @@ public class VirtualMachine
             }
         }
 
-        if(null!=db.createTable(targetTable, pkName, headerName, headerType,tran)){
-           return new QueryResult(true);
-        }
-        else{
+        try {
+            if(null!=db.createTable(targetTable, pkName, headerName, headerType,tran)){
+               return new QueryResult(true);
+            }
+            else{
+                return new QueryResult(false);
+            }
+        } catch (IOException e) {
+            //TODO 建表失败
+            e.printStackTrace();
+            return new QueryResult(false);
+        } catch (ClassNotFoundException e) {
+            //TODO 建表失败
+            e.printStackTrace();
             return new QueryResult(false);
         }
 
@@ -356,7 +365,7 @@ public class VirtualMachine
      * @param p 当前表上的指针
      * @return 满足条件返回true，否则返回false
      */
-    private boolean check(Cursor p) {
+    private boolean check(Cursor p) throws IOException, ClassNotFoundException {
 	    //如果没有where子句，那么返回true，即对所有记录都执行操作
 	    if(filters.size()==0){
 	        return true;
@@ -380,7 +389,7 @@ public class VirtualMachine
         }
     }
 
-    private void select(){
+    private void select() throws IOException, ClassNotFoundException {
         tran=db.beginReadTrans();
 	    //构造结果集的表头
 	    List<Column> selected=new ArrayList<>();
@@ -391,24 +400,42 @@ public class VirtualMachine
         }
         result=new QueryResult(selected);
 
-        Cursor p=db.getTable(targetTable,tran).createCursor(tran);
+        Cursor p= null;
+        try {
+            p = db.getTable(targetTable,tran).createCursor(tran);
+        } catch (IOException e) {
+            //TODO 打开表失败
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            //TODO 打开表失败
+            e.printStackTrace();
+        }
         //todo for View modified.
         if(isJoin){
-            temp = db.getTable(targetTable,tran).getColumns();
+            try {
+                temp = db.getTable(targetTable,tran).getColumnsName();
 
-            //todo modified 用于joinResult的循环匹配。
-            for(int k = 0; k < joinResult.getRes().size(); k++,joinIndex++){
-                if(check(null)){
-                    List<String> ansRecord=new ArrayList<>();
-                    for(int i = 0; i < temp.size(); i++){
-                        for(int j =0; j < selected.size(); j++){
-                            if(selected.get(j).getColumnName().equals(temp.get(i))){
-                                ansRecord.add(joinResult.getRes().get(k).get(i));
+                //todo modified 用于joinResult的循环匹配。
+                for(int k = 0; k < joinResult.getRes().size(); k++,joinIndex++){
+                    if(check(null)){
+                        List<String> ansRecord=new ArrayList<>();
+                        for(int i = 0; i < temp.size(); i++){
+                            for(int j =0; j < selected.size(); j++){
+                                if(selected.get(j).getColumnName().equals(temp.get(i))){
+                                    ansRecord.add(joinResult.getRes().get(k).get(i));
+                                }
                             }
                         }
+                        result.addRecord(ansRecord);
                     }
-                    result.addRecord(ansRecord);
                 }
+
+            } catch (IOException e) {
+                //TODO 打开表失败
+                e.printStackTrace();
+            } catch (ClassNotFoundException e) {
+                //TODO 打开表失败
+                e.printStackTrace();
             }
         }
 
@@ -430,7 +457,7 @@ public class VirtualMachine
             }
         }
     }
-    private void delete(){
+    private void delete() throws IOException, ClassNotFoundException {
         tran=db.beginWriteTrans();
 
         //todo 是否还有全表删除？
@@ -451,10 +478,10 @@ public class VirtualMachine
     /**
      * 对全表进行更新
      */
-    private void update(){
+    private void update() throws IOException, ClassNotFoundException {
         tran = db.beginWriteTrans();
         Cursor p = db.getTable(targetTable,tran).createCursor(tran);
-        List<String> header = db.getTable(targetTable,tran).getColumns();
+        List<String> header = db.getTable(targetTable,tran).getColumnsName();
         while(p!=null){
             List<String> row = p.getData();
             if(check(p)){
@@ -479,7 +506,7 @@ public class VirtualMachine
      * 将一条记录插入到表中
      * 因为上层没有产生default，下层也未提供接口，因此这里每次只能插入一条完整的记录
      */
-    private void insert(){
+    private void insert() throws IOException, ClassNotFoundException {
         tran = db.beginWriteTrans();
         List<String> colValues=new ArrayList<>();
 
@@ -524,9 +551,9 @@ public class VirtualMachine
      * @param evalDiscriptions 要计算的表达式描述
      * @param p 计算时需要依赖的数据的指针
      */
-    private  UnionOperand eval(List<EvalDiscription> evalDiscriptions,Cursor p){
+    private  UnionOperand eval(List<EvalDiscription> evalDiscriptions,Cursor p) throws IOException, ClassNotFoundException {
         Expression exp=new Expression();
-        List<String> info = db.getTable(targetTable,tran).getColumns();
+        List<String> info = db.getTable(targetTable,tran).getColumnsName();
 
         for(int i=0;i<evalDiscriptions.size();i++) {
             if(evalDiscriptions.get(i).cmd==OpCode.Operand){
@@ -584,13 +611,12 @@ public class VirtualMachine
         return exp.getAns();
     }
 
-    private void join(String tableName)
-    {
+    private void join(String tableName) throws IOException, ClassNotFoundException {
         Table table = db.getTable(tableName,tran);
         List<List<String>> resList = joinResult.getRes();
         List<Column> resHead = joinResult.getHeader();
         List<Column> fromTreeHead = new ArrayList<>();
-        table.getColumns().forEach(n -> fromTreeHead.add(new Column(n)));
+        table.getColumnsName().forEach(n -> fromTreeHead.add(new Column(n)));
 
         Cursor cursor = db.getTable(tableName,tran).createCursor(tran);
         JoinMatch matchedJoin = checkUnion(resHead, fromTreeHead);

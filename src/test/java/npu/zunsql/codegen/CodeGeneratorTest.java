@@ -71,7 +71,7 @@ public class CodeGeneratorTest {
                 Arrays.asList(
                         new Instruction(OpCode.Transaction, null, null, null),
                         new Instruction(OpCode.BeginJoin, null, null, null),
-                        new Instruction(OpCode.AddJoin, "t", null, null),
+                        new Instruction(OpCode.AddTable, "t", null, null),
                         new Instruction(OpCode.EndJoin, "1", null, null),
                         new Instruction(OpCode.Select, null, null, "1"),
                         new Instruction(OpCode.BeginColSelect, null, null, null),
@@ -90,8 +90,8 @@ public class CodeGeneratorTest {
                 Arrays.asList(
                         new Instruction(OpCode.Transaction, null, null, null),
                         new Instruction(OpCode.BeginJoin, null, null, null),
-                        new Instruction(OpCode.AddJoin, "t", null, null),
-                        new Instruction(OpCode.AddJoin, "t1", null, null),
+                        new Instruction(OpCode.AddTable, "t", null, null),
+                        new Instruction(OpCode.AddTable, "t1", null, null),
                         new Instruction(OpCode.EndJoin, "1", null, null),
                         new Instruction(OpCode.Select, null, null, "1"),
                         new Instruction(OpCode.BeginColSelect, null, null, null),

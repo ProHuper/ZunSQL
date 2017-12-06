@@ -4,81 +4,33 @@ import npu.zunsql.cache.CacheMgr;
 import npu.zunsql.cache.Page;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by Ed on 2017/10/28.
- */
-public class Table
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.nio.charset.Charset;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+
+public class Table implements TableReader ,Serializable
 {
-    private final static int LO_LOCKED = 1;
-    private final static int LO_SHARED = 2;
-    private Integer lock;
-    private String tableName;
-    private Column keyColumn;
-    private List<Column> columns;
-    private int rootNodePage;
+    protected String tableName;
+
+    protected Column keyColumn;
+
+    protected List<Column> columns;
+
+    protected LockType lock;
+
+    protected int rootNodePage;
 
     // page层的Mgr，用于对Page层进行操作。
     private CacheMgr cacheManager;
+
     private Page pageOne;
-
-    // 已经新建好了一个page，只需要填写相关table信息
-    protected Table(String name,Column key,List<Column> coList,int pageID,CacheMgr cacheMagr,Transaction thistran)
-    {
-        tableName = name;
-        keyColumn = key;
-        columns = coList;
-        lock = LO_SHARED;
-
-        // TODO: 初始化rootNodePage
-        cacheManager = cacheMagr;
-
-        pageOne = cacheManager.readPage(thistran.tranNum,pageID);
-
-        ByteBuffer thisBufer = pageOne.getPageBuffer();
-        // TODO:写入buffer。
-
-
-        while(!writeMyPage(thistran));
-
-    }
-
-    // 已有page，只需要加载其中的信息。
-    protected Table(int pageID,CacheMgr cacheMagr,Transaction thistran)
-    {
-        cacheManager = cacheMagr;
-        pageOne = cacheManager.readPage(thistran.tranNum,pageID);
-
-        ByteBuffer thisBufer = pageOne.getPageBuffer();
-        // TODO:读取buffer。
-
-    }
-
-    // 需要自己新建Page，并填写相关table信息
-    protected Table(String name,Column key,List<Column> coList,CacheMgr cacheMagr,Transaction thistran)
-    {
-        tableName = name;
-        keyColumn = key;
-        columns = coList;
-        lock = LO_SHARED;
-
-        // TODO: 初始化rootNodePage
-        cacheManager = cacheMagr;
-
-        // TODO: 此处存在问题，1024没有意义。
-        ByteBuffer tempBuffer = ByteBuffer.allocate(1024);
-
-        // TODO：QUE:不需要事务编号吗？
-        pageOne = new Page(tempBuffer);
-
-
-        // TODO:写入buffer。
-
-
-        while(!writeMyPage(thistran)) ;
-    }
-
 
     private boolean writeMyPage(Transaction myTran)
     {
@@ -86,20 +38,98 @@ public class Table
         return cacheManager.writePage(myTran.tranNum, pageOne);
     }
 
+    private void intoBytes(Transaction thisTran) throws IOException {
+        byte [] bytes=new byte[Page.PAGE_SIZE] ;
+        ByteArrayOutputStream byt=new ByteArrayOutputStream();
 
-    public boolean drop(Transaction thistran)
-    {
-        // TODO: 递归处理page。
+        ObjectOutputStream obj=new ObjectOutputStream(byt);
+        obj.writeObject(tableName);
+        obj.writeObject(keyColumn);
+        obj.writeObject(columns);
+        obj.writeObject(lock);
+        obj.writeObject(rootNodePage);
+        bytes=byt.toByteArray();
+        ByteBuffer thisBufer = pageOne.getPageBuffer();
+        thisBufer.put(bytes);
+        cacheManager.writePage(thisTran.tranNum,pageOne);
 
-        return true;
     }
 
-    public boolean clear(Transaction thistran)
-    {
-        // TODO：仅保留本Page，处理所有数据。
-        return true;
+
+
+    // 已有page，只需要加载其中的信息。
+    // 新建table的工作在database中已经完成，因此，可能加载出只有表头的空表。
+    protected Table(int pageID, CacheMgr cacheManager, Transaction thisTran) throws IOException, ClassNotFoundException {
+        super();
+        this.cacheManager = cacheManager;
+        pageOne = this.cacheManager.readPage(thisTran.tranNum,pageID);
+
+        ByteBuffer thisBufer = pageOne.getPageBuffer();
+        byte [] bytes=new byte[Page.PAGE_SIZE] ;
+        thisBufer.get(bytes,0,thisBufer.remaining());
+
+        ByteArrayInputStream byteTable=new ByteArrayInputStream(bytes);
+        ObjectInputStream objTable=new ObjectInputStream(byteTable);
+
+        this.tableName=(String)objTable.readObject();
+        this.keyColumn=(Column) objTable.readObject();
+        this.columns=(List<Column>)objTable.readObject();
+        this.lock=(LockType)objTable.readObject();
+        this.rootNodePage=(int)objTable.readObject();
+
+
     }
 
+    protected Integer getTablePageID()
+    {
+        return pageOne.getPageID();
+    }
+
+    protected Column getKeyColumn()
+    {
+        return keyColumn;
+    }
+
+    protected Node getRootNode(Transaction thisTran) throws IOException, ClassNotFoundException {
+        return new Node(rootNodePage, cacheManager, thisTran);
+    }
+
+    protected Column getColumn(String columnName)
+    {
+        for(int i = 0; i < columns.size(); i++)
+        {
+            if(columns.get(i).getName().equals(columnName))
+            {
+                return columns.get(i);
+            }
+        }
+        return null;
+    }
+
+    public Cursor createCursor(Transaction thistran)
+    {
+        return new TableCursor(this,thistran);  //NULL
+    }
+
+    public List<String> getColumnsName()
+    {
+        List<String> sList = new ArrayList<String>();
+        for(int i = 0; i < columns.size(); i++)
+        {
+            sList.add(columns.get(i).getName());
+        }
+        return sList;
+    }
+
+    public List<BasicType> getColumnsType()
+    {
+        List<BasicType> sList = new ArrayList<BasicType>();
+        for(int i = 0; i < columns.size(); i++)
+        {
+            sList.add(columns.get(i).getType());
+        }
+        return sList;
+    }
 
     public String getTableName()
     {
@@ -108,7 +138,7 @@ public class Table
 
     public boolean isLocked()
     {
-        if (lock == LO_LOCKED)
+        if (lock == LockType.Locked)
         {
             return true;
         }
@@ -118,53 +148,21 @@ public class Table
         }
     }
 
-    protected Node getRootNode(Transaction thistran)
-    {
-        Page nodePage = cacheManager.readPage(thistran.tranNum,rootNodePage);
-        return new Node(nodePage);
-    }
+    public boolean lock(Transaction thistran) throws IOException {
+        lock = LockType.Locked;   //NULL
 
-    public boolean lock(Transaction thistran)
-    {
-        lock = LO_LOCKED;   //NULL
-
-        // TODO:更新pageOne。
+        intoBytes(thistran);
 
         while(!writeMyPage(thistran));
         return true;
     }
 
-    public boolean unLock(Transaction thistran)
-    {
-        lock = LO_SHARED;   //NULL
+    public boolean unLock(Transaction thistran) throws IOException {
+        lock = LockType.Shared;   //NULL
 
-        // TODO:更新pageOne。
-
+        intoBytes(thistran);
         while(!writeMyPage(thistran));
         return true;
-    }
-
-    public Cursor createCursor(Transaction thistran)
-    {
-        return new Cursor(this,thistran);  //NULL
-    }
-    public Column getKeyColumn()
-    {
-        return keyColumn;
-    }
-    public List<Column> getColumns()
-    {
-        return columns;
-    }
-    public Column getColumn(String columnName)
-    {
-        for(int i = 0; i < columns.size(); i++)
-        {
-            if(columns.get(i).getColumnName().equals(columnName))
-            {
-                return columns.get(i);
-            }
-        }
-        return null;
     }
 }
+
