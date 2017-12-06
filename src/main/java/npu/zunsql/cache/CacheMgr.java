@@ -27,7 +27,6 @@ public class CacheMgr
     private ReadWriteLock lock;
 
 
-
     public CacheMgr(String dbName)
     {
         this.dbName       = dbName;
@@ -45,6 +44,7 @@ public class CacheMgr
      * 生成一个新的事务对象，获得对应的锁
      * 记录到transMgr
      */
+
     public int beginTransation(String s)
     {
         Transaction trans = new Transaction(s, lock);
@@ -52,6 +52,7 @@ public class CacheMgr
         this.transMgr.put(trans.transID, trans);
         return trans.transID;
     }
+
 
     /**提交transID对应的事务，将更新的副本页写回到cache中
 	 * 1.先得到该事物修改过的page List，对于page list中的每个page 
@@ -119,6 +120,8 @@ public class CacheMgr
         this.transMgr.remove(transID);
         return true;
     }
+
+
 
     /**transID对应的事务回滚
      *
@@ -194,7 +197,6 @@ public class CacheMgr
                 tempPage = this.cacheList.get(0);
                 this.cacheList.remove(0);
                 this.cachePageMap.remove(tempPage.pageID);
-
                 tempPage = getPageFromFile(pageID);
                 this.cacheList.add(tempPage);
                 this.cachePageMap.put(tempPage.pageID, tempPage);
@@ -234,7 +236,6 @@ public class CacheMgr
         writePageList.add(tempBuffer);
         return true;
     }
-
 
     /**将指定的某一页写回至内存
      *
