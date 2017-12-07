@@ -1,6 +1,3 @@
-约定：
-1.不支持计算
-
 数据库支持的数据类型：
 1.整数 Integer
 2.字符串 String
@@ -60,24 +57,45 @@ op 支持的字符串：GT、GE、LT、LE、EQ、NE、Mul、Div、Add、Sub、No
 示例（参数位置请参照指令表，空参数连带其位置会被省略）
 
 [sql]
-delete from table_1 where x=c+10*a and y=100
+select a,b from x,y where z<10/2 and w>100*q
 
 [bytecode]
 Transaction
-Delete table_1
+BeginJoin
+AddTable x
+AddTable y
+EndJoin $1
+BeginColSelect
+AddColSelect a
+AddCOlSelect b
+EndColSelect
 BeginFilter
-Operand x
-Operator EQ
-Operand c
-Operator Add
+Operand z
 Operand 10
-Operator Mul
-Operand a
-Operator And
-Operand y
-Operator EQ
+Operand 2
+Operator Div
+Operator LT
+Operand w
 Operand 100
+Operand q
+Operator Mul
+Operator GT
+Operator And
 EndFilter
 Execute
 Commit
 
+[sql]
+update t1 set a=b*10
+
+[bytecode]
+Transaction
+Update t1
+Set a
+BeginExpression
+Operand b
+Operand 10
+Operator Mul
+EndExpression
+Execute
+Commit

@@ -12,6 +12,10 @@ public class Expression {
         operands=new Stack<>();
     }
 
+    public void clearStack(){
+        operands.clear();
+    }
+
     public void addOperand(UnionOperand obj){
         operands.add(obj);
     }
@@ -111,6 +115,11 @@ public class Expression {
         if(obj.getKey().getValue()==obj.getValue().getValue()){
             return 1;
         }
+        else if(obj.getKey().getType() == BasicType.String){
+            if(obj.getKey().getValue().equals(obj.getValue().getValue()))
+                return 1;
+            else return 0;
+        }
         else{
             return 0;
         }
@@ -119,50 +128,6 @@ public class Expression {
         return 1-EQ(a,b);
     }
     Integer GE(UnionOperand a,UnionOperand b){
-        Pair<UnionOperand,UnionOperand> obj=typeCast(new Pair<>(a,b));
-        if(obj.getKey().getType()==BasicType.String){
-            if(obj.getKey().getValue().compareTo(obj.getValue().getValue())>=0){
-                return 1;
-            }
-            else{
-                return 0;
-            }
-        }
-        else{
-            //int和double都可以使用double类型来比较大小
-            Double x=Double.valueOf(obj.getKey().getValue());
-            Double y=Double.valueOf(obj.getKey().getValue());
-            if(x>=y){
-                return 1;
-            }
-            else{
-                return 0;
-            }
-        }
-    }
-    Integer GT(UnionOperand a,UnionOperand b){
-        Pair<UnionOperand,UnionOperand> obj=typeCast(new Pair<>(a,b));
-        if(obj.getKey().getType()==BasicType.String){
-            if(obj.getKey().getValue().compareTo(obj.getValue().getValue())>0){
-                return 1;
-            }
-            else{
-                return 0;
-            }
-        }
-        else{
-            //int和double都可以使用double类型来比较大小
-            Double x=Double.valueOf(obj.getKey().getValue());
-            Double y=Double.valueOf(obj.getKey().getValue());
-            if(x>y){
-                return 1;
-            }
-            else{
-                return 0;
-            }
-        }
-    }
-    Integer LE(UnionOperand a,UnionOperand b){
         Pair<UnionOperand,UnionOperand> obj=typeCast(new Pair<>(a,b));
         if(obj.getKey().getType()==BasicType.String){
             if(obj.getKey().getValue().compareTo(obj.getValue().getValue())<=0){
@@ -175,8 +140,8 @@ public class Expression {
         else{
             //int和double都可以使用double类型来比较大小
             Double x=Double.valueOf(obj.getKey().getValue());
-            Double y=Double.valueOf(obj.getKey().getValue());
-            if(x<=y){
+            Double y=Double.valueOf(obj.getValue().getValue());
+            if(y>=x){
                 return 1;
             }
             else{
@@ -184,7 +149,7 @@ public class Expression {
             }
         }
     }
-    Integer LT(UnionOperand a,UnionOperand b){
+    Integer GT(UnionOperand a,UnionOperand b){
         Pair<UnionOperand,UnionOperand> obj=typeCast(new Pair<>(a,b));
         if(obj.getKey().getType()==BasicType.String){
             if(obj.getKey().getValue().compareTo(obj.getValue().getValue())<0){
@@ -197,8 +162,52 @@ public class Expression {
         else{
             //int和double都可以使用double类型来比较大小
             Double x=Double.valueOf(obj.getKey().getValue());
-            Double y=Double.valueOf(obj.getKey().getValue());
-            if(x<y){
+            Double y=Double.valueOf(obj.getValue().getValue());
+            if(y>x){
+                return 1;
+            }
+            else{
+                return 0;
+            }
+        }
+    }
+    Integer LE(UnionOperand a,UnionOperand b){
+        Pair<UnionOperand,UnionOperand> obj=typeCast(new Pair<>(a,b));
+        if(obj.getKey().getType()==BasicType.String){
+            if(obj.getKey().getValue().compareTo(obj.getValue().getValue())>=0){
+                return 1;
+            }
+            else{
+                return 0;
+            }
+        }
+        else{
+            //int和double都可以使用double类型来比较大小
+            Double x=Double.valueOf(obj.getKey().getValue());
+            Double y=Double.valueOf(obj.getValue().getValue());
+            if(y<=x){
+                return 1;
+            }
+            else{
+                return 0;
+            }
+        }
+    }
+    Integer LT(UnionOperand a,UnionOperand b){
+        Pair<UnionOperand,UnionOperand> obj=typeCast(new Pair<>(a,b));
+        if(obj.getKey().getType()==BasicType.String){
+            if(obj.getKey().getValue().compareTo(obj.getValue().getValue())>0){
+                return 1;
+            }
+            else{
+                return 0;
+            }
+        }
+        else{
+            //int和double都可以使用double类型来比较大小
+            Double x=Double.valueOf(obj.getKey().getValue());
+            Double y=Double.valueOf(obj.getValue().getValue());
+            if(y<x){
                 return 1;
             }
             else{
@@ -214,7 +223,7 @@ public class Expression {
         else{
             //int和double都可以使用double类型来计算
             Double x=Double.valueOf(obj.getKey().getValue());
-            Double y=Double.valueOf(obj.getKey().getValue());
+            Double y=Double.valueOf(obj.getValue().getValue());
             return new Pair<>(null,x+y);
         }
     }
@@ -227,8 +236,8 @@ public class Expression {
         else{
             //int和double都可以使用double类型来计算
             Double x=Double.valueOf(obj.getKey().getValue());
-            Double y=Double.valueOf(obj.getKey().getValue());
-            return x-y;
+            Double y=Double.valueOf(obj.getValue().getValue());
+            return y-x;
         }
     }
     Double Mul(UnionOperand a,UnionOperand b){
@@ -240,7 +249,7 @@ public class Expression {
         else{
             //int和double都可以使用double类型来计算
             Double x=Double.valueOf(obj.getKey().getValue());
-            Double y=Double.valueOf(obj.getKey().getValue());
+            Double y=Double.valueOf(obj.getValue().getValue());
             return x*y;
         }
     }
@@ -253,12 +262,16 @@ public class Expression {
         else{
             //int和double都可以使用double类型来计算
             Double x=Double.valueOf(obj.getKey().getValue());
-            Double y=Double.valueOf(obj.getKey().getValue());
+            Double y=Double.valueOf(obj.getValue().getValue());
             if(Math.abs(y)<1e-10){
                 Util.log("除数不能为0");
                 return 0.0;
             }
-            return x/y;
+            if(obj.getKey().getType() == BasicType.Integer &&
+                    obj.getValue().getType() == BasicType.Integer){
+                return (double)(int)(y/x);
+            }
+            return y/x;
         }
     }
     Integer And(UnionOperand a,UnionOperand b){

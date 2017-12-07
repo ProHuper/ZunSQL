@@ -8,6 +8,9 @@ public class UnionOperand {
     public UnionOperand(BasicType pType,String pValue){
         value=pValue;
         type=pType;
+        if(type == BasicType.Integer){
+            value = (int)(double)Double.valueOf(value)+"";
+        }
     }
     public BasicType getType() {
         return type;
