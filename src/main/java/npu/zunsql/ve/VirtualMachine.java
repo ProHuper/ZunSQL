@@ -73,6 +73,15 @@ public class VirtualMachine
         db=pdb;
 	}
 
+	public QueryResult runAll(List<Instruction> instructions){
+
+	    for(Instruction instruction : instructions){
+	        //run(instruction);
+        }
+
+	    return result;
+    }
+
     public QueryResult run(Instruction instruction) throws IOException, ClassNotFoundException {
         OpCode opCode = instruction.opCode;
         String p1 = instruction.p1;
