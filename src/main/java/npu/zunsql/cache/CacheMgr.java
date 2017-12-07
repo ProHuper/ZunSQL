@@ -399,7 +399,7 @@ public class CacheMgr
             //独占锁
             FileLock lock = fc.lock();
             tempPage.pageBuffer.flip();
-            fc.write(tempPage.pageBuffer, tempPage.pageID*Page.PAGE_SIZE+CacheMgr.FILEHEADERSIZE+CacheMgr.UNUSEDLISTSIZE));
+            fc.write(tempPage.pageBuffer, tempPage.pageID*Page.PAGE_SIZE+CacheMgr.FILEHEADERSIZE+CacheMgr.UNUSEDLISTSIZE);
             lock.release();
 
         }
