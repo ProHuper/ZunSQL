@@ -37,7 +37,7 @@ public class CodeGenerator {
                     selectTableName += 1;
                     ret.add(new Instruction(OpCode.BeginJoin, "", "", ""));
                     for (TableRelation table: ((Select) statement).from) {
-                        ret.add(new Instruction(OpCode.AddJoin, table.tableName.names.get(0), "", ""));
+                        ret.add(new Instruction(OpCode.AddTable, table.tableName.names.get(0), "", ""));
                     }
                     ret.add(new Instruction(OpCode.EndJoin, selectTableName.toString(), "", ""));
                     ret.add(new Instruction(OpCode.Select, null, null, selectTableName.toString()));
