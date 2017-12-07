@@ -23,7 +23,7 @@ public class Database
     private CacheMgr cacheManager;
 
     // 根据dbname构造数据库缓存对象
-    protected Database(String name) throws IOException, ClassNotFoundException
+    public Database(String name) throws IOException, ClassNotFoundException
     {
         dBName = name;
         cacheManager = new CacheMgr(dBName);
@@ -64,7 +64,7 @@ public class Database
     }
 
     // 关闭数据库
-    public boolean colse()
+    public boolean close()
     {
         cacheManager.close();
         return true;

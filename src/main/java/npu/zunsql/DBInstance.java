@@ -3,6 +3,7 @@ package npu.zunsql;
 import npu.zunsql.codegen.CodeGenerator;
 import npu.zunsql.sqlparser.Parser;
 import npu.zunsql.sqlparser.ast.Relation;
+import npu.zunsql.ve.Instruction;
 import npu.zunsql.ve.QueryResult;
 import npu.zunsql.ve.VirtualMachine;
 import npu.zunsql.tree.Database;
