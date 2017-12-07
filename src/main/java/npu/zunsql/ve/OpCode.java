@@ -1,6 +1,7 @@
 package npu.zunsql.ve;
 
-public enum OpCode {
+public enum OpCode{
+
     Transaction,
     Commit,
     Rollback,
@@ -9,59 +10,56 @@ public enum OpCode {
     DropDB,
 
     CreateTable,
-    AddCol,
-    BeginPK,
-    AddPK,
-    EndPK,
-
     DropTable,
 
     Insert,
-    BeginItem,
-    AddItemCol,
-    EndItem,
-
-    BeginFilter,
-    Filter,
-    EndFilter,
-
     Delete,
-
     Select,
-    BeginColSelect,
-    AddColSelect,
-    EndColSelect,
-
     Update,
     Set,
 
-    BeginExpression,
-    EndExpression,
-
-    BeginJoin,
-    AddTable,
-    EndJoin,
-
+    Add,
+    Sub,
+    Div,
+    Mul,
+    And,
+    Not,
+    Or,
     GT,
     GE,
     LT,
     LE,
     EQ,
     NE,
-    Mul,
-    Div,
     Neg,
-    Sub,
-    And,
-    Or,
-    Not,
 
-    Operator,
+    AddCol,
+
+    BeginPK,
+    AddPK,
+    EndPK,
+
     Operand,
+    Operator,
+
+    BeginItem,
+    AddItemCol,
+    EndItem,
+
+    BeginColSelect,
+    AddColSelect,
+    EndColSelect,
+
+    BeginFilter,
+    EndFilter,
 
     BeginJoin,
-    AddJoin,
+    AddTable,
     EndJoin,
 
     Execute,
+
+    BeginExpression,
+    EndExpression
+
 }

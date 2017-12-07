@@ -7,7 +7,7 @@ import java.io.IOException;
 /**
  * Created by Ed on 2017/10/28.
  */
-abstract class Transaction
+public abstract class Transaction
 {
     // transaction中包含一个事务号。
     protected Integer tranNum;
@@ -21,9 +21,9 @@ abstract class Transaction
     }
 
     // 定义了两个抽象操作，提交和回滚。
-    abstract boolean Commit() throws IOException;
+    public abstract boolean Commit() throws IOException;
 
-    abstract boolean RollBack();
+    public abstract boolean RollBack() throws IOException;
 }
 
 class WriteTran extends Transaction
@@ -43,8 +43,7 @@ class WriteTran extends Transaction
         return true;
     }
 
-    public boolean RollBack()
-    {
+    public boolean RollBack() throws IOException {
         return cacheMagr.rollbackTransation(tranNum);
     }
 }
@@ -66,8 +65,7 @@ class ReadTran extends Transaction
         return true;
     }
 
-    public boolean RollBack()
-    {
+    public boolean RollBack() throws IOException {
         return cacheMagr.rollbackTransation(tranNum);
     }
 }

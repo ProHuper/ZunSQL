@@ -1,6 +1,3 @@
-约定：
-1.不支持计算
-
 数据库支持的数据类型：
 1.整数 Integer
 2.字符串 String
@@ -14,16 +11,9 @@
 ——————————————————————————————————————————————————————————————————————————
 opcode                  p1              p2              p3
 ——————————————————————————————————————————————————————————————————————————
-Integer              	                                int_value
-String               	                                string_value
-Float													float_value
-
-Transaction
-Commit
+Transaction                                               
+Commit                                                    
 Rollback
-
-CreateDB                                                db_name
-DropDB                                                  db_name
 
 CreateTable                                             table_name
 DropTable                                               table_name
@@ -34,96 +24,78 @@ Select                                                  table_name
 Update                                                  table_name
 
 AddCol                  col_name      col_type
-
 BeginPK
-AddPK                   col_name
+AddPK                   col_name        
 EndPK
 
-BeginItem
+BeginItem                                                 
 AddItemCol              col_name      col_type      value
-EndItem
+EndItem                                                   
 
-BeginFilter
-Operand 				col_name	  constant
+BeginFilter                                                 
+Operand					col_name	  constant
 Operator				op
-EndFilter
+EndFilter                                                 
 
-BeginColSelect
-AddColSelect            col_name
-EndColSelect
+BeginColSelect                                            
+AddColSelect            col_name                        
+EndColSelect                                              
 
-Set                     col_name                      value
+Set                     col_name
+BeginExpression
+EndExpression
 
-Execute
+BeginJoin
+AddTable                table_name
+EndJoin                 table_name
+
+Execute                                                   
 ——————————————————————————————————————————————————————————————————————————
 
-op 支持的字符串：GT、GE、LT、LE、EQ、NE、Mul、Div、Add、Sub、Not、And、Or
-
+op 支持的字符串：GT、GE、LT、LE、EQ、NE、Mul、Div、Add、Sub、Not、And、Or、Neg
 
 示例（参数位置请参照指令表，空参数连带其位置会被省略）
 
 [sql]
-delete from table_1 where x=10 and y=100
+select a,b from x,y where z<10/2 and w>100*q
 
 [bytecode]
 Transaction
-Delete table_1
-BeginFilter
-Filter x Equal 10
-And
-Filter y Equal 100
-EndFilter
-Execute
-Commit
-
-
-[sql]
-insert into table_1(x,y,z) values(1,2,ccc)
-
-[bytecode]
-Transaction
-Insert table_1
-BeginItem
-AddItemCol x Integer 1
-AddItemCol y Integer 2
-AddItemCol z String ccc
-EndItem
-Execute
-Commit
-
-[sql]
-select a,b from t1 where x=1 or y>2
-
-[bytecode]
-Transaction
-Select t1
+BeginJoin
+AddTable x
+AddTable y
+EndJoin $1
 BeginColSelect
 AddColSelect a
-AddColSelect b
+AddCOlSelect b
 EndColSelect
 BeginFilter
-Filter x Equal 1
-Or
-Filter y Greater 2
+Operand z
+Operand 10
+Operand 2
+Operator Div
+Operator LT
+Operand w
+Operand 100
+Operand q
+Operator Mul
+Operator GT
+Operator And
 EndFilter
 Execute
 Commit
 
 [sql]
-create table test (
- x Integer PRIMARY KEY,
- y Integer,
- z String
-)
+update t1 set a=b*10
 
 [bytecode]
 Transaction
-CreateTable test
-AddCol x Integer 
-AddCol y Integer 
-AddCol z String 
-BeginPK 
-AddPK x 
-EndPK 
+Update t1
+Set a
+BeginExpression
+Operand b
+Operand 10
+Operator Mul
+EndExpression
 Execute
 Commit

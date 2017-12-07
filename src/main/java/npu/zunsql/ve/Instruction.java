@@ -1,13 +1,14 @@
 package npu.zunsql.ve;
 
-import npu.zunsql.common.FormatObject;
+public class Instruction {
 
-public class Instruction extends FormatObject {
-    public OpCode opcode;
-    public String p1, p2, p3;
+    public OpCode opCode;
+    public String p1;
+    public String p2;
+    public String p3;
 
-    public Instruction(OpCode opcode, String p1, String p2, String p3) {
-        this.opcode = opcode;
+    public Instruction(OpCode opCode, String p1, String p2, String p3){
+        this.opCode = opCode;
         this.p1 = p1;
         this.p2 = p2;
         this.p3 = p3;
