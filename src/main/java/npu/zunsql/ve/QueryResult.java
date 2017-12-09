@@ -7,21 +7,25 @@ public class QueryResult
 {
     private List<List<String>> res = new ArrayList<>();
     private List<Column> header;
-    private boolean isSucceed;
-    private boolean isSelect;
-    private int affected;
-    private String resInfo;
+    private int affectedCount;
 
     public QueryResult(List<Column> pCol) {
         header=new ArrayList<Column>(pCol);
+        affectedCount=0;
         return;
     }
-    public QueryResult(boolean pIsSucceed){
-        isSucceed=pIsSucceed;
+
+    public QueryResult(){
+        affectedCount=0;
     }
 
-    public boolean getIsSucceed(){
-        return isSucceed;
+    public int getAffectedCount(){
+        return  affectedCount;
+    }
+
+    public void addAffectedCount()
+    {
+        affectedCount++;
     }
 
     public boolean addRecord(List<String> pRecord)
@@ -43,32 +47,60 @@ public class QueryResult
         return res;
     }
 
-    public boolean isSelect() {
-        return isSelect;
-    }
+//    public void setActivity(Activity type){
+//        this.type = type;
+//    }
+//
+//    private void constructSelect(){
+//
+//    }
+//
+//    private void constructUpdate(){
+//
+//    }
+//
+//    private void constructInsert(){
+//
+//    }
+//
+//    private void constructDelete(){
+//
+//    }
+//
+//    private void constructDrop(){
+//
+//    }
+//
+//    private void constructCreate(){
+//
+//    }
+//
+//    private void constructResult(){
+//        switch (type){
+//            case Select:
+//                constructSelect();
+//                break;
+//            case Delete:
+//                constructDelete();
+//                break;
+//            case Insert:
+//                constructInsert();
+//                break;
+//            case Update:
+//                constructUpdate();
+//                break;
+//            case CreateTable:
+//                constructCreate();
+//                break;
+//            case DropTable:
+//                constructDrop();
+//                break;
+//        }
+//    }
+//
+//    private String getFinalResult(){
+//        constructResult();
+//        return result;
+//    }
 
-    public void setSelect(boolean select) {
-        isSelect = select;
-    }
-
-    public int getAffected() {
-        return affected;
-    }
-
-    public void addAffected(int affected) {
-        this.affected++;
-    }
-
-    public String getResInfo() {
-        return resInfo;
-    }
-
-    public void setResInfo(String resInfo) {
-        this.resInfo = resInfo;
-    }
-
-    public String resConvert(){
-        String result = "";
-        return result;
-    }
 }

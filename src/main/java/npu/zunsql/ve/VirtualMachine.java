@@ -5,11 +5,10 @@ import npu.zunsql.tree.*;
 import java.io.IOException;
 import java.util.*;
 
-public class VirtualMachine
-{
-	//作为过滤器来对记录进行筛选
-	private List<EvalDiscription> filters;
-	//存储被选出的列
+public class VirtualMachine {
+    //作为过滤器来对记录进行筛选
+    private List<EvalDiscription> filters;
+    //存储被选出的列
     private List<String> selectedColumns;
     //存储要插入的记录
     private List<AttrInstance> record;
@@ -24,7 +23,7 @@ public class VirtualMachine
     //要更新的属性名称，顺序必须与下一个变量的顺序一致
     private List<String> updateAttrs;
     //要更新的属性值，顺序必须与上一个变量的顺序一致
-    private List<List<EvalDiscription> > updateValues;
+    private List<List<EvalDiscription>> updateValues;
     //临时变量
     private List<EvalDiscription> singleUpdateValue;
     //记录本次execute将执行的命令
@@ -33,65 +32,58 @@ public class VirtualMachine
     private QueryResult joinResult;
     //事务句柄
     private Transaction tran;
-    //等待连接的表名
-    private List<String> waitingJoin;
 
-    //todo modified
     private boolean isJoin = false;
     private int joinIndex = 0;
 
 
     private boolean suvReadOnly;
-	private boolean recordReadOnly;
-	private boolean columnsReadOnly;
-	private boolean selectedColumnsReadOnly;
+    private boolean recordReadOnly;
+    private boolean columnsReadOnly;
+    private boolean selectedColumnsReadOnly;
     private Database db;
 
-	public VirtualMachine(Database pdb)
-	{
-		recordReadOnly=true;
-		columnsReadOnly=true;
-		selectedColumnsReadOnly=true;
-		suvReadOnly=true;
+    public VirtualMachine(Database pdb) {
+        recordReadOnly = true;
+        columnsReadOnly = true;
+        selectedColumnsReadOnly = true;
+        suvReadOnly = true;
 
-		tran=null;
-        result=null;
-		activity=null;
-		targetTable=null;
-		joinResult=null;
+        tran = null;
+        result = null;
+        activity = null;
+        targetTable = null;
+        joinResult = null;
 
-        waitingJoin=new ArrayList<>();
-		filters=new ArrayList<>();
-		selectedColumns=new ArrayList<>();
-		record=new ArrayList<>();
-		columns=new ArrayList<>();
-		updateAttrs =new ArrayList<>();
-		updateValues =new ArrayList<>();
-		singleUpdateValue=new ArrayList<>();
+        filters = new ArrayList<>();
+        selectedColumns = new ArrayList<>();
+        record = new ArrayList<>();
+        columns = new ArrayList<>();
+        updateAttrs = new ArrayList<>();
+        updateValues = new ArrayList<>();
+        singleUpdateValue = new ArrayList<>();
 
-		pkName=null;
-        db=pdb;
-	}
-
-	public QueryResult runAll(List<Instruction> instructions){
-
-	    for(Instruction instruction : instructions){
-	        //run(instruction);
-        }
-
-	    return result;
+        pkName = null;
+        db = pdb;
     }
 
-    public QueryResult run(Instruction instruction) throws IOException, ClassNotFoundException {
+    public QueryResult run(List<Instruction> instructions) throws Exception {
+
+        for (Instruction cmd : instructions) {
+            run(cmd);
+        }
+        return result;
+    }
+
+    private void run(Instruction instruction) throws IOException, ClassNotFoundException {
         OpCode opCode = instruction.opCode;
         String p1 = instruction.p1;
         String p2 = instruction.p2;
         String p3 = instruction.p3;
 
-        //所有操作都改为延时操作，即在execute后生效，其他命令只会向VM中填充信息
+        //所有操作都是延时操作，即在execute后生效，其他命令只会向VM中填充信息
         //特例是commit指令和rollback指令会立即执行
-        switch (opCode)
-        {
+        switch (opCode) {
             //下面是关于事务的处理代码
             case Transaction:
                 //如果这里不能提供Transaction的类型，那么只能在execute的时候由虚拟机来自动推断
@@ -101,8 +93,7 @@ public class VirtualMachine
             case Commit:
                 try {
                     tran.Commit();
-                }
-                catch (IOException e){
+                } catch (IOException e) {
                     Util.log("提交失败");
                     throw e;
                 }
@@ -114,9 +105,9 @@ public class VirtualMachine
 
             //下面是创建表的处理代码
             case CreateTable:
-                activity=Activity.CreateTable;
+                activity = Activity.CreateTable;
                 columnsReadOnly = false;
-                targetTable=p3;
+                targetTable = p3;
                 break;
 
             case AddCol:
@@ -141,14 +132,14 @@ public class VirtualMachine
 
             //下面是删除表的操作
             case DropTable:
-                activity=Activity.DropTable;
-                targetTable=p3;
+                activity = Activity.DropTable;
+                targetTable = p3;
                 break;
 
             //下面是插入操作，这是个延时操作
             case Insert:
                 activity = Activity.Insert;
-                targetTable=p3;
+                targetTable = p3;
                 break;
 
             //下面是删除操作，这是个延时操作
@@ -184,11 +175,11 @@ public class VirtualMachine
             //关于选择器的选项，这里借助表达式实现，仅在最后将记录的表达式传给filters
             case BeginFilter:
                 suvReadOnly = false;
-                singleUpdateValue=new ArrayList<>();
+                singleUpdateValue = new ArrayList<>();
                 break;
 
             case EndFilter:
-                filters=singleUpdateValue;
+                filters = singleUpdateValue;
                 suvReadOnly = true;
                 break;
 
@@ -228,22 +219,22 @@ public class VirtualMachine
                 break;
 
             case BeginExpression:
-                suvReadOnly=false;
-                singleUpdateValue=new ArrayList<>();
+                suvReadOnly = false;
+                singleUpdateValue = new ArrayList<>();
                 break;
 
             case EndExpression:
                 updateValues.add(singleUpdateValue);
-                suvReadOnly=true;
+                suvReadOnly = true;
                 break;
 
             //记录Expression描述的代码
             case Operand:
-                singleUpdateValue.add(new EvalDiscription(opCode,p1,p2));
+                singleUpdateValue.add(new EvalDiscription(opCode, p1, p2));
                 break;
 
             case Operator:
-                singleUpdateValue.add(new EvalDiscription(OpCode.valueOf(p1),null,null));
+                singleUpdateValue.add(new EvalDiscription(OpCode.valueOf(p1), null, null));
                 break;
 
             case Execute:
@@ -255,91 +246,50 @@ public class VirtualMachine
                 break;
 
         }
-        return result;
     }
 
-    private boolean execute() throws IOException, ClassNotFoundException {
-        if(targetTable==null) {
-            Util.log("没有指定要操作的表!");
+    private void execute() throws IOException, ClassNotFoundException {
+        result=new QueryResult();
+        switch (activity) {
+            case Select:
+                select();
+                break;
+            case Delete:
+                delete();
+                break;
+            case Update:
+                update();
+                break;
+            case Insert:
+                insert();
+                break;
+            case CreateTable:
+                createTable();
+                break;
+            case DropTable:
+                dropTable();
+                break;
+            default:
+                break;
         }
-        else {
-            switch (activity){
-                case Select:
-                    select();
-                    break;
-                case Delete:
-                    delete();
-                    break;
-                case Update:
-                    update();
-                    break;
-                case Insert:
-                    insert();
-                    break;
-                case CreateTable:
-                    createTable();
-                    break;
-                case DropTable:
-                    dropTable();
-                    break;
-                default:
-                    break;
-            }
-        }
-        return true;
     }
 
-    private QueryResult dropTable() throws IOException, ClassNotFoundException {
-        tran=db.beginWriteTrans();
-        //todo modified.
-        if(db.dropTable(targetTable,tran)==false){
+    private void dropTable() throws IOException, ClassNotFoundException {
+        tran = db.beginWriteTrans();
+        if (db.dropTable(targetTable, tran) == false) {
             Util.log("删除表失败");
-            return new QueryResult(false);
-        }
-        else{
-            return new QueryResult(true);
         }
     }
-    private QueryResult createTable(){
-	    //需要开启一个写事务
-	    tran=db.beginWriteTrans();
 
-	    //检索主键 unused because it doesn't matter.
-        BasicType pkType;
-        for(Column x:columns){
-            if(x.getColumnName()==pkName){
-                switch (x.getColumnType()){
-                    case "String":
-                        pkType = BasicType.String;
-                        break;
-                    case "Integer":
-                        pkType = BasicType.Integer;
-                        break;
-                    case "Float":
-                        pkType = BasicType.Float;
-                        break;
-                }
-            }
-        }
-
-        //将ve的Column重构为tree的Column
-//        List<npu.zunsql.tree.Column> tColumns=new ArrayList<>();
-//        for(Column item:columns){
-//            BasicType type= BasicType.String;
-//            if(item.getColumnType()=="Integer"){
-//                type= BasicType.Integer;
-//            }
-//            else if(item.getColumnType()=="Float"){
-//                type= BasicType.Float;
-//            }
-//            tColumns.add(new npu.zunsql.tree.Column(type,item.getColumnName()));
-//        }
+    private  void createTable() throws IOException,ClassNotFoundException{
+        //需要开启一个写事务
+        tran = db.beginWriteTrans();
 
         List<String> headerName = new ArrayList<>();
         List<BasicType> headerType = new ArrayList<>();
-        for(Column n: columns){
+        for (Column n : columns) {
             headerName.add(n.ColumnName);
-            switch (n.getColumnType()){
+            switch (n.getColumnType()) {
                 case "String":
                     headerType.add(BasicType.String);
                     break;
@@ -351,86 +301,67 @@ public class VirtualMachine
             }
         }
 
-        try {
-            if(null!=db.createTable(targetTable, pkName, headerName, headerType,tran)){
-               return new QueryResult(true);
-            }
-            else{
-                return new QueryResult(false);
-            }
-        } catch (IOException e) {
-            //TODO 建表失败
-            e.printStackTrace();
-            return new QueryResult(false);
-        } catch (ClassNotFoundException e) {
-            //TODO 建表失败
-            e.printStackTrace();
-            return new QueryResult(false);
+        if (db.createTable(targetTable, pkName, headerName, headerType, tran) == null) {
+            Util.log("创建表失败");
         }
-
     }
+
     /**
-     *检查当前记录是否满足where子句的条件
+     * 检查当前记录是否满足where子句的条件
+     *
      * @param p 当前表上的指针
      * @return 满足条件返回true，否则返回false
      */
     private boolean check(Cursor p) throws IOException, ClassNotFoundException {
-	    //如果没有where子句，那么返回true，即对所有记录都执行操作
-	    if(filters.size()==0){
-	        return true;
+        //如果没有where子句，那么返回true，即对所有记录都执行操作
+        if (filters.size() == 0) {
+            return true;
         }
-        //todo  modifide.
+
         UnionOperand ans;
-        if(isJoin)
+        if (isJoin)
             ans = eval(filters, joinIndex);
         else
             ans = eval(filters, p);
-	    if(ans.getType()==BasicType.String){
-	        Util.log("where子句的表达式返回值不能为String");
-	        //返回false,此返回值没有意义
+        if (ans.getType() == BasicType.String) {
+            Util.log("where子句的表达式返回值不能为String");
             return false;
-        }
-        else if(Math.abs(Double.valueOf(ans.getValue()))<1e-10){
-	        return false;
-        }
-        else{
+        } else if (Math.abs(Double.valueOf(ans.getValue())) < 1e-10) {
+            return false;
+        } else {
             return true;
         }
     }
 
     private void select() throws IOException, ClassNotFoundException {
-        tran=db.beginReadTrans();
-	    //构造结果集的表头
-	    List<Column> selected=new ArrayList<>();
-	    List<String> temp;
-	    for(String colName:selectedColumns){
-            Column col=new Column(colName);
+        tran = db.beginReadTrans();
+        //构造结果集的表头
+        List<Column> selected = new ArrayList<>();
+        List<String> temp;
+        for (String colName : selectedColumns) {
+            Column col = new Column(colName);
             selected.add(col);
         }
-        result=new QueryResult(selected);
+        result = new QueryResult(selected);
 
-        Cursor p= null;
+        Cursor p = null;
         try {
-            p = db.getTable(targetTable,tran).createCursor(tran);
-        } catch (IOException e) {
-            //TODO 打开表失败
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            //TODO 打开表失败
-            e.printStackTrace();
+            p = db.getTable(targetTable, tran).createCursor(tran);
+        } catch (Exception e){
+            throw e;
         }
-        //todo for View modified.
-        if(isJoin){
-            try {
-                temp = db.getTable(targetTable,tran).getColumnsName();
 
-                //todo modified 用于joinResult的循环匹配。
-                for(int k = 0; k < joinResult.getRes().size(); k++,joinIndex++){
-                    if(check(null)){
-                        List<String> ansRecord=new ArrayList<>();
-                        for(int i = 0; i < temp.size(); i++){
-                            for(int j =0; j < selected.size(); j++){
-                                if(selected.get(j).getColumnName().equals(temp.get(i))){
+        if (isJoin) {
+            try {
+                temp = db.getTable(targetTable, tran).getColumnsName();
+
+                //用于joinResult的循环匹配。
+                for (int k = 0; k < joinResult.getRes().size(); k++, joinIndex++) {
+                    if (check(null)) {
+                        List<String> ansRecord = new ArrayList<>();
+                        for (int i = 0; i < temp.size(); i++) {
+                            for (int j = 0; j < selected.size(); j++) {
+                                if (selected.get(j).getColumnName().equals(temp.get(i))) {
                                     ansRecord.add(joinResult.getRes().get(k).get(i));
                                 }
                             }
@@ -440,22 +371,16 @@ public class VirtualMachine
                 }
 
             } catch (IOException e) {
-                //TODO 打开表失败
-                e.printStackTrace();
-            } catch (ClassNotFoundException e) {
-                //TODO 打开表失败
-                e.printStackTrace();
+                throw e;
             }
-        }
-
-        else{
+        } else {
             temp = joinResult.getHeaderString();
-            while(p!=null){
-                if(check(p)){
-                    List<String> ansRecord=new ArrayList<>();
-                    for(int i = 0; i < temp.size(); i++){
-                        for(int j =0; j < selected.size(); j++){
-                            if(selected.get(j).getColumnName().equals(temp.get(i))){
+            while (p != null) {
+                if (check(p)) {
+                    List<String> ansRecord = new ArrayList<>();
+                    for (int i = 0; i < temp.size(); i++) {
+                        for (int j = 0; j < selected.size(); j++) {
+                            if (selected.get(j).getColumnName().equals(temp.get(i))) {
                                 ansRecord.add(p.getData().get(i));
                             }
                         }
@@ -466,19 +391,22 @@ public class VirtualMachine
             }
         }
     }
-    private void delete() throws IOException, ClassNotFoundException {
-        tran=db.beginWriteTrans();
 
-        //todo 是否还有全表删除？
+    private void delete() throws IOException, ClassNotFoundException {
+        tran = db.beginWriteTrans();
+
+//        //因下层未提供接口，暂时注释掉
 //        if(filters.size()==0){
 //            db.getTable(targetTable,tran).clear(tran);
 //        }
-        Cursor p=db.getTable(targetTable,tran).createCursor(tran);
-        while(p!=null){
-            if(check(p)){
-                p.delete(tran);
-            }
-            else{
+
+        Cursor p = db.getTable(targetTable, tran).createCursor(tran);
+        while (p != null) {
+            if (check(p)) {
+                if(p.delete(tran)){
+                    result.addAffectedCount();
+                }
+            } else {
                 p.moveToNext(tran);
             }
         }
@@ -489,24 +417,25 @@ public class VirtualMachine
      */
     private void update() throws IOException, ClassNotFoundException {
         tran = db.beginWriteTrans();
-        Cursor p = db.getTable(targetTable,tran).createCursor(tran);
-        List<String> header = db.getTable(targetTable,tran).getColumnsName();
-        while(p!=null){
+        Cursor p = db.getTable(targetTable, tran).createCursor(tran);
+        List<String> header = db.getTable(targetTable, tran).getColumnsName();
+        while (p != null) {
             List<String> row = p.getData();
-            if(check(p)){
-                //Todo modified.
-                for(int i = 0; i< updateAttrs.size(); i++){
+            if (check(p)) {
+                for (int i = 0; i < updateAttrs.size(); i++) {
                     //查询要更新的属性的信息并创建cell对象来执行更新
-                    String name=record.get(i).attrName;
-                    for(String info:header){
-                        if(info.equals(name)){
-                            row.set(i,eval(updateValues.get(i),p).getValue());
+                    String name = record.get(i).attrName;
+                    for (String info : header) {
+                        if (info.equals(name)) {
+                            row.set(i, eval(updateValues.get(i), p).getValue());
                         }
                     }
                 }
 
             }
-            p.setData(tran,row);
+            if(p.setData(tran, row)){
+                result.addAffectedCount();
+            }
             p.moveToNext(tran);
         }
     }
@@ -517,71 +446,70 @@ public class VirtualMachine
      */
     private void insert() throws IOException, ClassNotFoundException {
         tran = db.beginWriteTrans();
-        List<String> colValues=new ArrayList<>();
+        List<String> colValues = new ArrayList<>();
 
-        for(AttrInstance item:record){
+        for (AttrInstance item : record) {
             colValues.add(item.getValue());
         }
 
-        db.getTable(targetTable,tran).createCursor(tran).insert(tran,colValues);
+        if(db.getTable(targetTable, tran).createCursor(tran).insert(tran, colValues)){
+            result.addAffectedCount();
+        }
     }
 
     /**
      * 确定一个字符串值的最小可承载类型
+     *
      * @param strVal 要判断的值
      * @return 最小的可承载类型
      */
-    private static BasicType lowestType(String strVal){
-	    int dot=0;
-	    boolean alpha=false;
-	    for(int i=0;i<strVal.length();i++){
-	        char c=strVal.charAt(i);
-            if(c=='.'){
+    private static BasicType lowestType(String strVal) {
+        int dot = 0;
+        boolean alpha = false;
+        for (int i = 0; i < strVal.length(); i++) {
+            char c = strVal.charAt(i);
+            if (c == '.') {
                 dot++;
-            }
-            else if(c>'9'||c<'0'){
-                alpha=true;
+            } else if (c > '9' || c < '0') {
+                alpha = true;
                 break;
             }
         }
-        if(alpha==true||dot>=2){
-	        return BasicType.String;
-        }
-        else if(dot==1){
+        if (alpha == true || dot >= 2) {
+            return BasicType.String;
+        } else if (dot == 1) {
             return BasicType.Float;
-        }
-        else{
+        } else {
             return BasicType.Integer;
         }
     }
 
     /**
-     *根据表达式的描述求值
+     * 根据表达式的描述求值
+     *
      * @param evalDiscriptions 要计算的表达式描述
-     * @param p 计算时需要依赖的数据的指针
+     * @param p                计算时需要依赖的数据的指针
      */
-    private  UnionOperand eval(List<EvalDiscription> evalDiscriptions,Cursor p) throws IOException, ClassNotFoundException {
-        Expression exp=new Expression();
-        List<String> info = db.getTable(targetTable,tran).getColumnsName();
+    private UnionOperand eval(List<EvalDiscription> evalDiscriptions, Cursor p) throws IOException, ClassNotFoundException {
+        Expression exp = new Expression();
+        List<String> info = db.getTable(targetTable, tran).getColumnsName();
 
-        for(int i=0;i<evalDiscriptions.size();i++) {
-            if(evalDiscriptions.get(i).cmd==OpCode.Operand){
-                if(evalDiscriptions.get(i).col_name!=null){
+        for (int i = 0; i < evalDiscriptions.size(); i++) {
+            if (evalDiscriptions.get(i).cmd == OpCode.Operand) {
+                if (evalDiscriptions.get(i).col_name != null) {
 
-                    for(int j = 0; j < info.size(); i++){
-                        if(info.get(j).equals(evalDiscriptions.get(i).col_name)){
+                    for (int j = 0; j < info.size(); i++) {
+                        if (info.get(j).equals(evalDiscriptions.get(i).col_name)) {
                             exp.addOperand(new UnionOperand(p.getColumnType(info.get(j)), p.getData().get(j)));
                         }
                     }
 
+                } else {
+                    String val = evalDiscriptions.get(i).constant;
+                    BasicType cType = lowestType(val);
+                    exp.addOperand(new UnionOperand(cType, val));
                 }
-                else{
-                    String val=evalDiscriptions.get(i).constant;
-                    BasicType cType= lowestType(val);
-                    exp.addOperand(new UnionOperand(cType,val));
-                }
-            }
-            else{
+            } else {
                 exp.applyOperator(evalDiscriptions.get(i).cmd);
             }
         }
@@ -590,30 +518,28 @@ public class VirtualMachine
 
     /**
      * eval的重载，在下层不提供视图机制的时候用于处理临时表。
-     * */
-    private  UnionOperand eval(List<EvalDiscription> evalDiscriptions,int joinIndex){
-        Expression exp=new Expression();
+     */
+    private UnionOperand eval(List<EvalDiscription> evalDiscriptions, int joinIndex) {
+        Expression exp = new Expression();
         List<String> infoJoin = joinResult.getHeaderString();
 
-        for(int i=0;i<evalDiscriptions.size();i++) {
-            if(evalDiscriptions.get(i).cmd==OpCode.Operand){
-                if(evalDiscriptions.get(i).col_name!=null){
+        for (int i = 0; i < evalDiscriptions.size(); i++) {
+            if (evalDiscriptions.get(i).cmd == OpCode.Operand) {
+                if (evalDiscriptions.get(i).col_name != null) {
 
-                    for(int j = 0; j < infoJoin.size(); i++){
-                        if(infoJoin.get(j).equals(evalDiscriptions.get(i).col_name)){
+                    for (int j = 0; j < infoJoin.size(); i++) {
+                        if (infoJoin.get(j).equals(evalDiscriptions.get(i).col_name)) {
                             exp.addOperand(new UnionOperand(joinResult.getHeader().get(j).getColumnTypeBasic()
-                                    ,joinResult.getRes().get(joinIndex).get(j)));
+                                    , joinResult.getRes().get(joinIndex).get(j)));
                         }
                     }
 
+                } else {
+                    String val = evalDiscriptions.get(i).constant;
+                    BasicType cType = lowestType(val);
+                    exp.addOperand(new UnionOperand(cType, val));
                 }
-                else{
-                    String val=evalDiscriptions.get(i).constant;
-                    BasicType cType= lowestType(val);
-                    exp.addOperand(new UnionOperand(cType,val));
-                }
-            }
-            else{
+            } else {
                 exp.applyOperator(evalDiscriptions.get(i).cmd);
             }
         }
@@ -621,39 +547,37 @@ public class VirtualMachine
     }
 
     private void join(String tableName) throws IOException, ClassNotFoundException {
-        Table table = db.getTable(tableName,tran);
+        Table table = db.getTable(tableName, tran);
         List<List<String>> resList = joinResult.getRes();
         List<Column> resHead = joinResult.getHeader();
         List<Column> fromTreeHead = new ArrayList<>();
         table.getColumnsName().forEach(n -> fromTreeHead.add(new Column(n)));
 
-        Cursor cursor = db.getTable(tableName,tran).createCursor(tran);
+        Cursor cursor = db.getTable(tableName, tran).createCursor(tran);
         JoinMatch matchedJoin = checkUnion(resHead, fromTreeHead);
         QueryResult copy = new QueryResult(matchedJoin.getJoinHead());
 
-        for(int i = 0; i < resList.size(); i++){
+        for (int i = 0; i < resList.size(); i++) {
             List<String> tempRes = resList.get(i);
-            while(cursor != null)
-            {
+            while (cursor != null) {
                 List<String> fromTreeString = cursor.getData();
                 List<String> copyTreeString = new ArrayList<>();
                 fromTreeString.forEach(n -> copyTreeString.add(n));
 
                 Iterator iterator = matchedJoin.getJoinUnder().keySet().iterator();
-                while(iterator.hasNext()){
+                while (iterator.hasNext()) {
                     int nextKey = (Integer) iterator.next();
                     int nextValue = matchedJoin.getJoinUnder().get(nextKey);
                     String s1 = tempRes.get(nextKey);
                     String s2 = fromTreeString.get(nextValue);
-                    if( !s1.equals(s2) ){
+                    if (!s1.equals(s2)) {
                         break;
-                    }
-                    else{
+                    } else {
                         copyTreeString.remove(nextValue);
                     }
                 }
 
-                if(iterator.hasNext()){
+                if (iterator.hasNext()) {
                     List<String> line = new ArrayList<>();
                     tempRes.forEach(n -> line.add(n));
                     copyTreeString.forEach(n -> line.add(n));
@@ -666,22 +590,22 @@ public class VirtualMachine
         joinResult = copy;
     }
 
-    public JoinMatch checkUnion(List<Column> head1, List<Column> head2){
+    public JoinMatch checkUnion(List<Column> head1, List<Column> head2) {
         List<Column> unionHead = new ArrayList<>();
-        Map<Integer,Integer> unionUnder = new HashMap<>();
+        Map<Integer, Integer> unionUnder = new HashMap<>();
 
         head1.forEach(n -> unionHead.add(n));
 
-        for(Column n : head2){
-            if(!head1.contains(n)){
+        for (Column n : head2) {
+            if (!head1.contains(n)) {
                 unionHead.add(n);
             }
         }
 
-        for(int i = 0; i < head1.size(); i++){
+        for (int i = 0; i < head1.size(); i++) {
             int locate = head2.indexOf(head1.get(i));
-            if(locate != -1){
-                unionUnder.put(i,locate);
+            if (locate != -1) {
+                unionUnder.put(i, locate);
             }
         }
 
@@ -689,34 +613,32 @@ public class VirtualMachine
     }
 
     //这个方法只用于测试自然连接操作。
-    public QueryResult forTestJoin(JoinMatch joinMatch, QueryResult input1, QueryResult input2){
+    public QueryResult forTestJoin(JoinMatch joinMatch, QueryResult input1, QueryResult input2) {
         int matchCount = 0;
         QueryResult copy = new QueryResult(joinMatch.getJoinHead());
         List<List<String>> resList = input1.getRes();
-        for(int i = 0; i < resList.size(); i++){
+        for (int i = 0; i < resList.size(); i++) {
             List<String> tempRes = resList.get(i);
-            for(List<String> fromTreeString: input2.getRes())
-            {
+            for (List<String> fromTreeString : input2.getRes()) {
                 List<String> copyTreeString = new ArrayList<>();
                 fromTreeString.forEach(n -> copyTreeString.add(n));
                 Iterator iterator = joinMatch.getJoinUnder().keySet().iterator();
                 matchCount = 0;
 
-                while(iterator.hasNext()){
+                while (iterator.hasNext()) {
                     int nextKey = (Integer) iterator.next();
                     int nextValue = joinMatch.getJoinUnder().get(nextKey);
                     String s1 = tempRes.get(nextKey);
                     String s2 = fromTreeString.get(nextValue);
-                    if( !s1.equals(s2) ){
+                    if (!s1.equals(s2)) {
                         break;
-                    }
-                    else{
+                    } else {
                         matchCount++;
                         copyTreeString.remove(nextValue);
                     }
                 }
 
-                if(matchCount == joinMatch.getJoinUnder().size()){
+                if (matchCount == joinMatch.getJoinUnder().size()) {
                     List<String> line = new ArrayList<>();
                     tempRes.forEach(n -> line.add(n));
                     copyTreeString.forEach(n -> line.add(n));
