@@ -8,18 +8,35 @@ import npu.zunsql.ve.QueryResult;
 import npu.zunsql.ve.VirtualMachine;
 import npu.zunsql.tree.Database;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
 
 public class DBInstance
 {
 	private Database db;
-	
-	public boolean Open(String name)
-	{	
-		db = new Database(name);
-		if(db!=null)return true;
-		  else return false;
+	private VirtualMachine vm;
+
+	private DBInstance(Database db)
+	{
+		this.db = db;
+		this.vm = new VirtualMachine(db);
+	}
+
+	public static DBInstance Open(String name)
+	{
+		Database db = null;
+
+		try {
+			db = new Database(name);
+		}catch(IOException ie){
+			ie.printStackTrace();
+			System.exit(-1);
+		}catch(ClassNotFoundException ce) {
+			ce.printStackTrace();
+			System.exit(-1);
+		}
+		return new DBInstance(db);
 	}
 
 	public QueryResult Execute(String statement)
@@ -28,21 +45,22 @@ public class DBInstance
 		List<Relation> statements = new ArrayList<Relation>();
 		statements.add(Parser.parse(statement));
 
-		//得到查询的结果
-		VirtualMachine vm = new VirtualMachine(db);
-		
-		List<Instruction> array = CodeGenerator.GenerateByteCode(statements);
-		for(Instruction s: array){
-			vm.run(s);
+		List<Instruction> Ins = CodeGenerator.GenerateByteCode(statements);
+
+		try {
+			return vm.run(Ins);
+		}catch(Exception e){
+			e.printStackTrace();
+			return null;
 		}
-		
-		//执行select语句返回结果集，其他语句默认情况下执行成功,结果集为null。
-        return vm.result;
 	}
-	
-	public boolean Close()
+
+	public void Close()
 	{
-		if(db!=null&&db.close())return true;
-		else return false;
+		try {
+			db.close();
+		}catch(Exception e){
+			e.printStackTrace();
+		}
 	}
 }
