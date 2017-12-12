@@ -124,17 +124,41 @@ public class Database
         tempBuffer.put(bytes);
 
         Page tablePage = new Page(tempBuffer);
+        byte [] bytess=new byte[Page.PAGE_SIZE] ;
+        tempBuffer.rewind();
+        tablePage.getPageBuffer().get(bytess,0, tablePage.getPageBuffer().remaining());
         cacheManager.writePage(thisTran.tranNum,tablePage);
-        Integer pageID = tablePage.getPageID();
 
+        Integer pageID = tablePage.getPageID();
+        //thisTran.Commit();
+
+        /*
+        Page mpage = cacheManager.readPage(thisTran.tranNum, tablePage.getPageID());
+        byte [] bytess=new byte[Page.PAGE_SIZE] ;
+        mpage.getPageBuffer().get(bytess,0,mpage.getPageBuffer().remaining());
+        */
+
+        //test/*
+        ByteBuffer tBuffer = ByteBuffer.allocate(Page.PAGE_SIZE);
+        tBuffer.putInt(0, 123);
+        Page tpage = new Page(tBuffer);
+        tpage.getPageBuffer().rewind();
+        int t = tpage.getPageBuffer().getInt(0);
+        cacheManager.writePage(thisTran.tranNum, tpage);
+        thisTran.Commit();
+        Page mpage = cacheManager.readPage(thisTran.tranNum, tpage.getPageID());
+        int ttt = mpage.getPageBuffer().getInt(0);
+        /*
         List<String> masterRow_s = new ArrayList<String>();
         masterRow_s.add(tableName);
         masterRow_s.add(pageID.toString());
 
+
+        /*
         Cursor masterCursor = master.createCursor(thisTran);
         masterCursor.insert(thisTran,masterRow_s);
-
-        return new Table(pageID,cacheManager,thisTran);   //NULL
+        */
+        return  new Table(pageID,cacheManager,thisTran);  //NULL
     }
 
     //根据传来的表名，主键以及其他的列名来新建一个表放入tableList中

@@ -53,9 +53,10 @@ public class CacheMgr
                 fc = fin.getChannel();
                 ByteBuffer fileHeader = ByteBuffer.allocate(this.FILEHEADERSIZE);
                 fc.read(fileHeader, 0);
-                int version =  fileHeader.getInt();
-                int magicNum =  fileHeader.getInt();
-                if(version == 1 && magicNum == 314159)
+
+                int version =  fileHeader.getInt(0);
+                int magicNum =  fileHeader.getInt(1);
+                if(version == 1 && magicNum == 123)
                 {
                     ByteBuffer unusedListBuffer = ByteBuffer.allocate(this.UNUSEDLISTSIZE);
                     fc.read(unusedListBuffer, this.FILEHEADERSIZE);
@@ -85,7 +86,7 @@ public class CacheMgr
                     db_file.createNewFile();
                     fin = new RandomAccessFile(db_file, "rw");
                     fc = fin.getChannel();
-                    fileHeader.flip();
+                    fileHeader.rewind();
                     fileHeader.putInt(1);           //version
                     fileHeader.putInt(314159);      //magic number
                     fc.write(fileHeader, 0);
@@ -100,17 +101,27 @@ public class CacheMgr
                 e.printStackTrace();
             }
         }
-        else {
+        else
+        {
             try {
                 db_file.createNewFile();
                 RandomAccessFile fin = null;
                 fin = new RandomAccessFile(db_file, "rw");
                 fc = fin.getChannel();
                 ByteBuffer fileHeader = ByteBuffer.allocate(this.FILEHEADERSIZE);
-                //fileHeader.flip();
-                fileHeader.putInt(1);           //version
-                fileHeader.putInt(314159);      //magic number
-                fc.write(fileHeader, 0);
+                fileHeader.rewind();
+                fileHeader.putInt(0, 1);           //version
+                fileHeader.putInt(1, 123);      //magic number
+                fileHeader.rewind();
+                System.out.println("begin");
+                System.out.println(fileHeader.getInt(0));
+                System.out.println(fileHeader.getInt(1));
+                int ret = fc.write(fileHeader, 0);
+                System.out.println(ret);
+                System.out.println("end");
+                fc.close();
+                fin.close();
+
             }
             catch (FileNotFoundException e) {
                 e.printStackTrace();
@@ -199,6 +210,10 @@ public class CacheMgr
             File db_file = new File(this.dbName);
             ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(journal_file));
 
+            RandomAccessFile fin = new RandomAccessFile(journal_file, "rw");
+            FileChannel fc = fin.getChannel();
+            ByteBuffer IDBuffer = ByteBuffer.allocate(Page.PAGE_SIZE+4);
+
             for( int i = 0 ; i < writePageList.size() ; i++) {
                 Page copyPage = writePageList.get(i);
                 Page tempPage = this.cachePageMap.get(copyPage.pageID);
@@ -223,22 +238,29 @@ public class CacheMgr
                 //cache命中，按照LRU更新cache的list
                 else {
                     for (int j = 0; j < cacheList.size(); j++) {
-                        Page jPage = cacheList.get(i);
+                        Page jPage = cacheList.get(j);
                         if (jPage.pageID == copyPage.pageID) {
-                            cacheList.remove(i);
+                            cacheList.remove(j);
                         }
                     }
                 }
 
                 //此时tempPage都是文件中的原始数据，写日志文件
                 if (journal_file.exists() && journal_file.isFile()) {
-                    out.writeObject(tempPage);
+                    //out.writeObject(tempPage);
+                    IDBuffer.rewind();
+                    IDBuffer.putInt(tempPage.pageID);
+                    IDBuffer.put(tempPage.pageBuffer);
+                    fc.write(IDBuffer);
                 }
 
                 //写cache
                 tempPage.pageID = copyPage.pageID;
+                tempPage.getPageBuffer().rewind();
                 tempPage.pageBuffer.put(copyPage.pageBuffer);
 
+                this.cacheList.add(tempPage);
+                this.cachePageMap.put(tempPage.pageID, tempPage);
                 //写直达，将该页同时写至数据库文件中
                 if (db_file.exists() && db_file.isFile()) {
                     this.setPageToFile(tempPage, db_file);
@@ -371,9 +393,13 @@ public class CacheMgr
         if(writePageList == null)
         {
             writePageList = new ArrayList<Page>();
-
+            writePageList.add(tempBuffer);
+            transOnPage.put(transID, writePageList);
         }
-        writePageList.add(tempBuffer);
+        else
+        {
+            writePageList.add(tempBuffer);
+        }
         return true;
     }
 

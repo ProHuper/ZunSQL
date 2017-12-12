@@ -65,6 +65,7 @@ public class Table implements TableReader ,Serializable
         pageOne = this.cacheManager.readPage(thisTran.tranNum,pageID);
 
         ByteBuffer thisBufer = pageOne.getPageBuffer();
+        thisBufer.rewind();
         byte [] bytes=new byte[Page.PAGE_SIZE] ;
         thisBufer.get(bytes,0,thisBufer.remaining());
 
