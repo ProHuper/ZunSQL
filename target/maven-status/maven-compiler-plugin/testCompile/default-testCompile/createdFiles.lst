@@ -1,4 +1,10 @@
-npu\zunsql\AppTest.class
+npu\zunsql\tree\DatabaseTest.class
 npu\zunsql\cache\PageTest.class
 npu\zunsql\cache\TransactionTest.class
+npu\zunsql\ve\ExpressionTest.class
+npu\zunsql\AppTest.class
 CacheMgrTest.class
+npu\zunsql\sqlparser\parser\RelationParserTest.class
+npu\zunsql\codegen\CodeGeneratorTest.class
+npu\zunsql\sqlparser\parser\ExpressionParserTest.class
+npu\zunsql\sqlparser\parser\TerminalParserTest.class

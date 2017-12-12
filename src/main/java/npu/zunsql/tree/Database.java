@@ -117,6 +117,7 @@ public class Database
         obj.writeObject(tableName);
         obj.writeObject(keyName);
         obj.writeObject(columns);
+
         obj.writeObject(lock);
         obj.writeObject(-1);
         bytes=byt.toByteArray();

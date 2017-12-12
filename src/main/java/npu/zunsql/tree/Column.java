@@ -2,6 +2,7 @@ package npu.zunsql.tree;
 
 import javafx.scene.control.Tab;
 
+import java.io.Serializable;
 import java.util.List;
 
 import static java.lang.Math.abs;
@@ -9,7 +10,7 @@ import static java.lang.Math.abs;
 /**
  * Created by Ed on 2017/10/29.
  */
-public class Column
+public class Column implements Serializable
 {
     // column中包含一个columntype。
     private BasicType columnType;

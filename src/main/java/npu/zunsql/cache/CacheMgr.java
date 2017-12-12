@@ -77,7 +77,7 @@ public class CacheMgr
                         else
                             Page.unusedID.add(unusedListBuffer.getInt());
                     }
-                    return true;
+                    return false;
                 }
                 else
                 {
@@ -89,7 +89,7 @@ public class CacheMgr
                     fileHeader.putInt(1);           //version
                     fileHeader.putInt(314159);      //magic number
                     fc.write(fileHeader, 0);
-                    return false;
+                    return true;
                 }
 
             }
@@ -107,7 +107,7 @@ public class CacheMgr
                 fin = new RandomAccessFile(db_file, "rw");
                 fc = fin.getChannel();
                 ByteBuffer fileHeader = ByteBuffer.allocate(this.FILEHEADERSIZE);
-                fileHeader.flip();
+                //fileHeader.flip();
                 fileHeader.putInt(1);           //version
                 fileHeader.putInt(314159);      //magic number
                 fc.write(fileHeader, 0);
@@ -118,9 +118,9 @@ public class CacheMgr
             catch (IOException e) {
                 e.printStackTrace();
             }
-            return false;
+            return true;
         }
-        return false;
+        return true;
     }
 
     public void close()
@@ -368,6 +368,11 @@ public class CacheMgr
     public boolean writePage(int transID, Page tempBuffer)
     {
         List<Page> writePageList= transOnPage.get(transID);
+        if(writePageList == null)
+        {
+            writePageList = new ArrayList<Page>();
+
+        }
         writePageList.add(tempBuffer);
         return true;
     }
